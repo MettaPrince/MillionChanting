@@ -262,7 +262,7 @@
 <body>
     <div class="card" id="mainCard">
         <h1>พระคาถาเงินล้าน</h1>
-        <div class="subtitle">ระบบตรวจจับเสียงอัจฉริยะ (Real-time)</div>
+        <div class="subtitle">ระบบตรวจจับเสียง (Real-time)</div>
 
         <div class="counter-panel">
             <span class="counter-value" id="loopCount">0</span>
@@ -317,54 +317,48 @@
         let streamRestartTimer;
         let resetTimeout;
 
+        // 🟢 1. เพิ่มตัวแปรสำหรับจับเวลา Idle (5 นาที)
+        let idleTimer;
+        const IDLE_TIMEOUT = 1 * 60 * 1000; //  (1 นาที)
+
         const kathaBox = document.getElementById('kathaBox');
         kathaLines.forEach((l, i) => {
             kathaBox.innerHTML += `<div class="line" id="line-${i}">${l.text}</div>`;
         });
 
         function updateUI(isLoopCompletion = false) {
-            // 🟢 เช็คว่าตอนนี้สวดถึง "ครึ่งหลัง" หรือยัง (index 6 คือวรรค พุทธะมะอะอุ...)
-            const isSecondHalf = currentLine >= 6; 
-
-            // อัปเดตข้อความในกล่องที่ซ่อนไว้
+            const isSecondHalf = currentLine >= 6;
             kathaLines.forEach((_, i) => {
                 const el = document.getElementById(`line-${i}`);
-                el.className = 'line'; // ล้างคลาสเก่าทั้งหมด
-
-                // เช็คสถานะการสวด
+                el.className = 'line';
                 if (i < currentLine) el.classList.add('completed');
                 else if (i === currentLine) el.classList.add('active');
 
-                // 🟢 ลอจิกสลับหน้าจอ (Pagination) Reuse พื้นที่
                 if (isSecondHalf) {
-                    // ถ้าอยู่ครึ่งหลัง (6-11) ให้ซ่อนครึ่งแรก (0-5)
                     if (i < 6) el.classList.add('page-hidden');
                 } else {
-                    // ถ้าอยู่ครึ่งแรก (0-5) ให้ซ่อนครึ่งหลัง (6-11)
                     if (i >= 6) el.classList.add('page-hidden');
                 }
             });
 
             document.getElementById('loopCount').innerText = loopCount;
 
-            // --- ส่วนของ Progress Bar (คงไว้เหมือนเดิม) ---
             const progressFill = document.getElementById('progressFill');
             if (isLoopCompletion) {
                 progressFill.style.transition = 'width 0.3s ease-out';
                 progressFill.style.width = '100%';
                 setTimeout(() => {
-                    progressFill.style.transition = 'none'; 
-                    progressFill.style.width = '0%'; 
+                    progressFill.style.transition = 'none';
+                    progressFill.style.width = '0%';
                     setTimeout(() => {
                         progressFill.style.transition = 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                     }, 50);
-                }, 400); 
+                }, 400);
             } else {
                 const percentage = (currentLine / kathaLines.length) * 100;
                 progressFill.style.width = `${percentage}%`;
             }
         }
-        // เรียกใช้ครั้งแรกเพื่อจัดหน้าจอเริ่มต้น
         updateUI();
 
         function findFirstMatch(txt, words) {
@@ -381,11 +375,46 @@
             return bestMatch;
         }
 
+        // 🟢 2. ฟังก์ชันรีเซ็ตเวลา Idle
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            if (isRecording) {
+                idleTimer = setTimeout(() => {
+                    // ถ้านิ่งเกิน 5 นาที จะให้หยุดสวดอัตโนมัติ และแจ้งเตือน
+                    alert("⏳ ระบบหยุดการฟังอัตโนมัติ เนื่องจากตรวจไม่พบเสียงสวดมนต์เป็นเวลานาน (เพื่อประหยัดพลังงาน)");
+                    stopChanting();
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        // 🟢 3. แยกฟังก์ชันหยุดสวดออกมา เพื่อให้เรียกใช้ได้จากหลายที่
+        function stopChanting() {
+            if (!isRecording) return;
+            mediaRecorder.stop();
+            socket.emit('stop-recognition');
+
+            clearInterval(streamRestartTimer); // ปิดการ Auto-restart ไมค์
+            clearTimeout(idleTimer); // ปิดตัวนับเวลา Idle
+
+            isRecording = false;
+            document.getElementById('mainCard').classList.remove('is-recording');
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.innerText = "🎤 เริ่มสวดมนต์";
+            startBtn.style.color = "var(--gold)";
+            startBtn.style.borderColor = "rgba(212, 175, 55, 0.5)";
+        }
+
         socket.on('speech-data', (data) => {
             if (!isRecording) return;
 
             const text = data.transcript;
             document.getElementById('transcript').innerText = text;
+
+            // 🟢 4. เมื่อระบบได้ยินเสียง หรือข้อความขยับ ให้รีเซ็ตเวลา Idle ทันที
+            if (text.trim().length > 0) {
+                resetIdleTimer();
+            }
 
             const cleanText = text.replace(/\s+/g, '');
             if (cleanText.length < lastMatchIndex - 10) {
@@ -416,8 +445,6 @@
                 const loopsAdded = Math.floor(absoluteNewCurrentLine / kathaLines.length);
                 loopCount += loopsAdded;
                 currentLine = absoluteNewCurrentLine % kathaLines.length;
-
-                // ส่งสัญญาณบอก UI ว่าเพิ่งบวกรอบใหม่ไป เพื่อเล่นเอฟเฟกต์
                 updateUI(loopsAdded > 0);
             }
         });
@@ -433,12 +460,15 @@
             mediaRecorder.start(250);
 
             isRecording = true;
-            document.getElementById('mainCard').classList.add('is-recording'); // เปิดไฟ Shimmer บนหลอด
+            document.getElementById('mainCard').classList.add('is-recording');
 
             const startBtn = document.getElementById('startBtn');
             startBtn.innerText = "🛑 หยุดสวด";
             startBtn.style.color = "#e74c3c";
             startBtn.style.borderColor = "rgba(231, 76, 60, 0.3)";
+
+            // เริ่มตั้งเวลานับ Idle ตั้งแต่วินาทีแรกที่กดเริ่ม
+            resetIdleTimer();
 
             streamRestartTimer = setInterval(() => {
                 if (isRecording) {
@@ -460,20 +490,10 @@
                 document.getElementById('transcript').innerText = '-';
                 await startChanting();
             } else {
-                mediaRecorder.stop();
-                socket.emit('stop-recognition');
-                clearInterval(streamRestartTimer);
-                isRecording = false;
-                document.getElementById('mainCard').classList.remove('is-recording'); // ปิดไฟ Shimmer
-
-                const startBtn = document.getElementById('startBtn');
-                startBtn.innerText = "🎤 เริ่มสวดมนต์";
-                startBtn.style.color = "var(--gold)";
-                startBtn.style.borderColor = "rgba(212, 175, 55, 0.5)";
+                stopChanting(); // 🟢 เรียกใช้ฟังก์ชันหยุดที่เราแยกไว้
             }
         };
 
-        // Smart Reset Button
         document.getElementById('resetBtn').onclick = function () {
             const btn = this;
             if (btn.dataset.confirm === "false") {
