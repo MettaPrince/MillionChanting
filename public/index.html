@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,189 +7,179 @@
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* 1. Divine Dark Theme & Modern Minimal */
         :root {
             --bg-color: #0a0a0c;
             --card-bg: #141416;
             --text-main: #e0e0e0;
-            --text-muted: #4a4a52;
+            --text-muted: #55555c;
             --gold: #d4af37;
             --gold-light: #f9e596;
             --green-completed: #2ecc71;
             --danger: #e74c3c;
         }
 
-        body {
-            font-family: 'Prompt', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
             min-height: 100vh;
         }
 
-        .card {
-            background: var(--card-bg);
-            max-width: 600px;
-            width: 100%;
-            padding: 40px 30px;
-            border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            text-align: center;
+        .card { 
+            background: var(--card-bg); 
+            max-width: 600px; 
+            width: 100%; 
+            padding: 40px 30px; 
+            border-radius: 24px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); 
+            text-align: center; 
             box-sizing: border-box;
-            border: 1px solid rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.08);
         }
 
-        h1 {
-            color: var(--gold);
-            font-size: 28px;
+        h1 { 
+            color: var(--gold); 
+            font-size: 26px; 
             font-weight: 600;
-            margin: 0 0 10px 0;
+            margin: 0 0 5px 0; 
             letter-spacing: 1px;
         }
-
-        .counter-panel {
-            margin: 30px 0;
-        }
-
-        .counter-value {
-            font-size: 80px;
-            font-weight: 300;
-            color: var(--gold-light);
-            display: block;
-            line-height: 1;
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-        }
-
-        .counter-label {
-            font-size: 16px;
+        
+        .subtitle {
             color: var(--text-muted);
-            letter-spacing: 2px;
-        }
-
-        /* ปุ่มต่างๆ */
-        .btn-group {
+            font-size: 14px;
+            font-weight: 300;
             margin-bottom: 30px;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
         }
 
-        .btn {
+        .counter-panel { margin: 20px 0; }
+        .counter-value { 
+            font-size: 80px; 
+            font-weight: 300; 
+            color: var(--gold-light); 
+            display: block; 
+            line-height: 1;
+            text-shadow: 0 0 25px rgba(212, 175, 55, 0.25);
+        }
+        .counter-label { font-size: 16px; color: var(--text-muted); letter-spacing: 2px;}
+
+        /* 🟢 1. ดีไซน์ Progress Bar แบบ Siri/Divine */
+        .progress-wrapper {
+            margin: 40px 0 30px 0;
+            padding: 0 10px;
+        }
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #d4af37, #f9e596, #ffffff);
+            background-size: 200% 100%;
+            border-radius: 10px;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); /* นุ่มนวลและเด้งนิดๆ */
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+            position: relative;
+        }
+        /* แอนิเมชันแสงวิ่งบนหลอดเวลาอัดเสียง */
+        .is-recording .progress-fill {
+            animation: shimmerBar 2s infinite linear;
+        }
+        @keyframes shimmerBar {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 🟢 2. ปุ่มต่างๆ */
+        .btn-group { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;}
+        .btn { 
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
-            padding: 12px 24px;
-            border: 1px solid transparent;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            outline: none;
+            font-size: 16px; 
+            padding: 12px 28px; 
+            border: 1px solid transparent; 
+            border-radius: 30px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            outline: none; 
             background: transparent;
         }
-
-        .btn-start {
-            background: rgba(212, 175, 55, 0.1);
-            color: var(--gold);
-            border-color: rgba(212, 175, 55, 0.5);
-        }
-
-        .btn-start:hover {
-            background: rgba(212, 175, 55, 0.2);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-        }
-
-        .btn-reset {
-            color: var(--text-muted);
-            border-color: #333;
-        }
-
-        .btn-reset:hover {
-            border-color: var(--text-main);
-            color: var(--text-main);
-        }
-
-        /* 2. Style สำหรับเนื้อสวดมนต์ */
-        .katha-container {
-            text-align: left;
-            margin: 25px 0;
-        }
-
-        .line {
-            position: relative;
-            padding: 12px 20px;
-            margin: 8px 0;
-            border-radius: 12px;
-            color: var(--text-muted);
-            font-size: 18px;
-            transition: color 0.4s ease;
-            line-height: 1.6;
-        }
-
-        /* 3. วรรคที่สวดผ่านไปแล้ว (สีเขียว) */
-        .line.completed {
-            color: var(--green-completed);
-            opacity: 0.8;
-        }
-
-        /* 4. วรรคปัจจุบัน (Siri-like glowing animation) */
-        .line.active {
-            color: var(--text-main);
-            font-weight: 400;
-            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-        }
-
-        /* เทคนิค CSS Masking สร้างขอบวิ่งแบบ Siri */
-        .line.active::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border-radius: 12px;
-            padding: 2px;
-            /* ความหนาของเส้นขอบ */
-            background: linear-gradient(90deg, transparent, var(--gold), #ffffff, var(--gold), transparent);
-            background-size: 200% 100%;
-            animation: siriGlow 2.5s linear infinite;
-            /* ตัดให้เหลือแค่ขอบ */
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-
-        @keyframes siriGlow {
-            0% {
-                background-position: 200% 0;
-            }
-
-            100% {
-                background-position: -200% 0;
-            }
-        }
-
-        .status-bar {
+        .btn-start { background: rgba(212, 175, 55, 0.1); color: var(--gold); border-color: rgba(212, 175, 55, 0.5); }
+        .btn-start:hover { background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+        .btn-reset { color: var(--text-muted); border-color: #333; }
+        .btn-reset:hover { border-color: var(--text-main); color: var(--text-main); }
+        
+        /* 🟢 3. Collapsible Panel สำหรับซ่อนข้อความดิบ */
+        details {
             margin-top: 30px;
-            font-size: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        summary {
+            padding: 16px;
             color: var(--text-muted);
-            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            outline: none;
+            list-style: none; /* ซ่อนลูกศร default */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s, background 0.3s;
         }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "▼";
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+        details[open] summary::after { transform: rotate(180deg); }
+        summary:hover { color: var(--gold); background: rgba(255, 255, 255, 0.02); }
 
-        #transcript {
-            color: #888;
-            font-style: italic;
+        .katha-container { text-align: left; padding: 10px 20px 20px 20px; }
+        .line { 
+            padding: 8px 15px; 
+            margin: 4px 0; 
+            border-radius: 8px; 
+            color: #333333; /* มืดสุดๆ จนกว่าจะผ่าน */
+            font-size: 15px; 
+            transition: color 0.4s ease; 
         }
+        .line.completed { color: var(--green-completed); opacity: 0.7; }
+        .line.active { color: var(--text-main); text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+
+        .status-bar { margin-top: 20px; font-size: 12px; color: #444; }
+        #transcript { color: #666; font-style: italic; }
     </style>
 </head>
-
 <body>
-    <div class="card">
+    <div class="card" id="mainCard">
         <h1>พระคาถาเงินล้าน</h1>
-
+        <div class="subtitle">ระบบตรวจจับเสียงอัจฉริยะ (Real-time)</div>
+        
         <div class="counter-panel">
             <span class="counter-value" id="loopCount">0</span>
             <span class="counter-label">จบ</span>
+        </div>
+
+        <!-- 🟢 Progress Bar ใหม่ -->
+        <div class="progress-wrapper">
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
         </div>
 
         <div class="btn-group">
@@ -198,7 +187,11 @@
             <button id="resetBtn" class="btn btn-reset" data-confirm="false">🔄 รีเซ็ต</button>
         </div>
 
-        <div class="katha-container" id="kathaBox"></div>
+        <!-- 🟢 ซ่อนกล่องข้อความไว้ใน details -->
+        <details>
+            <summary>แสดงความคืบหน้าของแต่ละวรรค (อย่างหยาบ)</summary>
+            <div class="katha-container" id="kathaBox"></div>
+        </details>
 
         <div class="status-bar">
             <span>เสียงที่จับได้: </span><span id="transcript">-</span>
@@ -227,9 +220,7 @@
         let mediaRecorder;
         const socket = io();
         let lastMatchIndex = 0;
-        let streamRestartTimer;
-
-        // ตัวแปรสำหรับปุ่ม Reset
+        let streamRestartTimer; 
         let resetTimeout;
 
         const kathaBox = document.getElementById('kathaBox');
@@ -237,18 +228,38 @@
             kathaBox.innerHTML += `<div class="line" id="line-${i}">${l.text}</div>`;
         });
 
-        function updateUI() {
+        function updateUI(isLoopCompletion = false) {
+            // อัปเดตข้อความในกล่องที่ซ่อนไว้
             kathaLines.forEach((_, i) => {
                 const el = document.getElementById(`line-${i}`);
-                el.className = 'line'; // ล้างคลาสเก่า
-
-                if (i < currentLine) {
-                    el.classList.add('completed');
-                } else if (i === currentLine) {
-                    el.classList.add('active'); // คลาสนี้จะแสดงขอบ Siri อัตโนมัติ
-                }
+                el.className = 'line';
+                if (i < currentLine) el.classList.add('completed');
+                else if (i === currentLine) el.classList.add('active');
             });
             document.getElementById('loopCount').innerText = loopCount;
+
+            // 🟢 อัปเดตหลอด Progress Bar
+            const progressFill = document.getElementById('progressFill');
+            
+            if (isLoopCompletion) {
+                // เอฟเฟกต์สวดจบ: วิ่งไป 100% สว่างวาบ แล้วหดกลับ
+                progressFill.style.transition = 'width 0.3s ease-out';
+                progressFill.style.width = '100%';
+                
+                setTimeout(() => {
+                    progressFill.style.transition = 'none'; // ปิดแอนิเมชันชั่วคราว
+                    progressFill.style.width = '0%'; // หดกลับทันทีไม่ให้เห็นการถอยหลัง
+                    
+                    // หน่วงเวลาเปิดแอนิเมชันกลับมา
+                    setTimeout(() => {
+                        progressFill.style.transition = 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    }, 50);
+                }, 400); // โชว์ 100% ค้างไว้ 0.4 วิ
+            } else {
+                // วิ่งปกติตามเปอร์เซ็นต์ (เช่น 1/12 = 8.3%)
+                const percentage = (currentLine / kathaLines.length) * 100;
+                progressFill.style.width = `${percentage}%`;
+            }
         }
         updateUI();
 
@@ -267,6 +278,8 @@
         }
 
         socket.on('speech-data', (data) => {
+            if (!isRecording) return; 
+
             const text = data.transcript;
             document.getElementById('transcript').innerText = text;
 
@@ -274,9 +287,9 @@
             if (cleanText.length < lastMatchIndex - 10) {
                 lastMatchIndex = 0;
             }
-
+            
             const activeText = cleanText.substring(lastMatchIndex);
-            const maxLookahead = 5;
+            const maxLookahead = 5; 
             let matchFound = false;
             let absoluteNewCurrentLine = currentLine;
             let matchObj = null;
@@ -289,8 +302,8 @@
                 if (match) {
                     matchFound = true;
                     matchObj = match;
-                    absoluteNewCurrentLine = currentLine + offset + 1;
-                    break;
+                    absoluteNewCurrentLine = currentLine + offset + 1; 
+                    break; 
                 }
             }
 
@@ -299,7 +312,9 @@
                 const loopsAdded = Math.floor(absoluteNewCurrentLine / kathaLines.length);
                 loopCount += loopsAdded;
                 currentLine = absoluteNewCurrentLine % kathaLines.length;
-                updateUI();
+                
+                // ส่งสัญญาณบอก UI ว่าเพิ่งบวกรอบใหม่ไป เพื่อเล่นเอฟเฟกต์
+                updateUI(loopsAdded > 0);
             }
         });
 
@@ -311,9 +326,11 @@
 
             socket.emit('start-recognition');
             mediaRecorder.ondataavailable = (e) => socket.emit('audio-chunk', e.data);
-            mediaRecorder.start(250);
+            mediaRecorder.start(250); 
 
             isRecording = true;
+            document.getElementById('mainCard').classList.add('is-recording'); // เปิดไฟ Shimmer บนหลอด
+            
             const startBtn = document.getElementById('startBtn');
             startBtn.innerText = "🛑 หยุดสวด";
             startBtn.style.color = "#e74c3c";
@@ -322,25 +339,29 @@
             streamRestartTimer = setInterval(() => {
                 if (isRecording) {
                     mediaRecorder.stop();
-                    socket.emit('stop-recognition');
+                    socket.emit('stop-recognition'); 
                     setTimeout(() => {
-                        if (isRecording) {
-                            socket.emit('start-recognition');
+                        if(isRecording) {
+                            socket.emit('start-recognition'); 
                             mediaRecorder.start(250);
                         }
                     }, 500);
                 }
-            }, 240000);
+            }, 240000); 
         }
 
         document.getElementById('startBtn').onclick = async () => {
             if (!isRecording) {
+                lastMatchIndex = 0; 
+                document.getElementById('transcript').innerText = '-';
                 await startChanting();
             } else {
                 mediaRecorder.stop();
                 socket.emit('stop-recognition');
-                clearInterval(streamRestartTimer);
+                clearInterval(streamRestartTimer); 
                 isRecording = false;
+                document.getElementById('mainCard').classList.remove('is-recording'); // ปิดไฟ Shimmer
+                
                 const startBtn = document.getElementById('startBtn');
                 startBtn.innerText = "🎤 เริ่มสวดมนต์";
                 startBtn.style.color = "var(--gold)";
@@ -348,17 +369,15 @@
             }
         };
 
-        // 🟢 ระบบ Smart Reset Button
-        document.getElementById('resetBtn').onclick = function () {
+        // Smart Reset Button
+        document.getElementById('resetBtn').onclick = function() {
             const btn = this;
             if (btn.dataset.confirm === "false") {
-                // กดครั้งแรก: ถามยืนยัน
                 btn.dataset.confirm = "true";
                 btn.innerText = "⚠️ ยืนยันรีเซ็ต?";
                 btn.style.color = "var(--danger)";
                 btn.style.borderColor = "rgba(231, 76, 60, 0.5)";
-
-                // นับถอยหลัง 3 วินาที ถ้าไม่กดยกเลิกสถานะ
+                
                 resetTimeout = setTimeout(() => {
                     btn.dataset.confirm = "false";
                     btn.innerText = "🔄 รีเซ็ต";
@@ -366,15 +385,13 @@
                     btn.style.borderColor = "";
                 }, 3000);
             } else {
-                // กดครั้งที่สอง: รีเซ็ตจริงๆ
                 clearTimeout(resetTimeout);
                 loopCount = 0;
                 currentLine = 0;
-                lastMatchIndex = 0;
+                lastMatchIndex = 0; 
                 updateUI();
                 document.getElementById('transcript').innerText = '-';
-
-                // เปลี่ยนปุ่มกลับ
+                
                 btn.dataset.confirm = "false";
                 btn.innerText = "🔄 รีเซ็ต";
                 btn.style.color = "";
@@ -383,5 +400,4 @@
         };
     </script>
 </body>
-
 </html>
