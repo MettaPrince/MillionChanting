@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,37 +19,37 @@
             --danger: #e74c3c;
         }
 
-        body { 
-            font-family: 'Prompt', sans-serif; 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 20px; 
-            display: flex; 
-            justify-content: center; 
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
             min-height: 100vh;
         }
 
-        .card { 
-            background: var(--card-bg); 
-            max-width: 600px; 
-            width: 100%; 
-            padding: 40px 30px; 
-            border-radius: 24px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); 
-            text-align: center; 
+        .card {
+            background: var(--card-bg);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            text-align: center;
             box-sizing: border-box;
             border: 1px solid rgba(212, 175, 55, 0.08);
         }
 
-        h1 { 
-            color: var(--gold); 
-            font-size: 26px; 
+        h1 {
+            color: var(--gold);
+            font-size: 26px;
             font-weight: 600;
-            margin: 0 0 5px 0; 
+            margin: 0 0 5px 0;
             letter-spacing: 1px;
         }
-        
+
         .subtitle {
             color: var(--text-muted);
             font-size: 14px;
@@ -56,67 +57,109 @@
             margin-bottom: 30px;
         }
 
-        .counter-panel { margin: 20px 0; }
-        .counter-value { 
-            font-size: 80px; 
-            font-weight: 300; 
-            color: var(--gold-light); 
-            display: block; 
+        .counter-panel {
+            margin: 20px 0;
+        }
+
+        .counter-value {
+            font-size: 80px;
+            font-weight: 300;
+            color: var(--gold-light);
+            display: block;
             line-height: 1;
             text-shadow: 0 0 25px rgba(212, 175, 55, 0.25);
         }
-        .counter-label { font-size: 16px; color: var(--text-muted); letter-spacing: 2px;}
+
+        .counter-label {
+            font-size: 16px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
 
         /* 🟢 1. ดีไซน์ Progress Bar แบบ Siri/Divine */
         .progress-wrapper {
             margin: 40px 0 30px 0;
             padding: 0 10px;
         }
+
         .progress-track {
             width: 100%;
             height: 6px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
             position: relative;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
         }
+
         .progress-fill {
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, #d4af37, #f9e596, #ffffff);
             background-size: 200% 100%;
             border-radius: 10px;
-            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); /* นุ่มนวลและเด้งนิดๆ */
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            /* นุ่มนวลและเด้งนิดๆ */
             box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
             position: relative;
         }
+
         /* แอนิเมชันแสงวิ่งบนหลอดเวลาอัดเสียง */
         .is-recording .progress-fill {
             animation: shimmerBar 2s infinite linear;
         }
+
         @keyframes shimmerBar {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         /* 🟢 2. ปุ่มต่างๆ */
-        .btn-group { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;}
-        .btn { 
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn {
             font-family: 'Prompt', sans-serif;
-            font-size: 16px; 
-            padding: 12px 28px; 
-            border: 1px solid transparent; 
-            border-radius: 30px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            outline: none; 
+            font-size: 16px;
+            padding: 12px 28px;
+            border: 1px solid transparent;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
             background: transparent;
         }
-        .btn-start { background: rgba(212, 175, 55, 0.1); color: var(--gold); border-color: rgba(212, 175, 55, 0.5); }
-        .btn-start:hover { background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-        .btn-reset { color: var(--text-muted); border-color: #333; }
-        .btn-reset:hover { border-color: var(--text-main); color: var(--text-main); }
-        
+
+        .btn-start {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            border-color: rgba(212, 175, 55, 0.5);
+        }
+
+        .btn-start:hover {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-reset {
+            color: var(--text-muted);
+            border-color: #333;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--text-main);
+            color: var(--text-main);
+        }
+
         /* 🟢 3. Collapsible Panel สำหรับซ่อนข้อความดิบ */
         details {
             margin-top: 30px;
@@ -126,6 +169,7 @@
             overflow: hidden;
             transition: all 0.3s ease;
         }
+
         summary {
             padding: 16px;
             color: var(--text-muted);
@@ -133,43 +177,93 @@
             cursor: pointer;
             user-select: none;
             outline: none;
-            list-style: none; /* ซ่อนลูกศร default */
+            list-style: none;
+            /* ซ่อนลูกศร default */
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
             transition: color 0.3s, background 0.3s;
         }
-        summary::-webkit-details-marker { display: none; }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
         summary::after {
             content: "▼";
             font-size: 10px;
             transition: transform 0.3s;
         }
-        details[open] summary::after { transform: rotate(180deg); }
-        summary:hover { color: var(--gold); background: rgba(255, 255, 255, 0.02); }
 
-        .katha-container { text-align: left; padding: 10px 20px 20px 20px; }
-        .line { 
-            padding: 8px 15px; 
-            margin: 4px 0; 
-            border-radius: 8px; 
-            color: #333333; /* มืดสุดๆ จนกว่าจะผ่าน */
-            font-size: 15px; 
-            transition: color 0.4s ease; 
+        details[open] summary::after {
+            transform: rotate(180deg);
         }
-        .line.completed { color: var(--green-completed); opacity: 0.7; }
-        .line.active { color: var(--text-main); text-shadow: 0 0 8px rgba(255,255,255,0.2); }
 
-        .status-bar { margin-top: 20px; font-size: 12px; color: #444; }
-        #transcript { color: #666; font-style: italic; }
+        summary:hover {
+            color: var(--gold);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .katha-container {
+            text-align: left;
+            padding: 10px 20px 20px 20px;
+        }
+
+        .line {
+            padding: 8px 15px;
+            margin: 4px 0;
+            border-radius: 8px;
+            color: #333333;
+            font-size: 15px;
+            /* 🟢 เพิ่ม Transition ครอบคลุมทั้งความสูง การจางหาย และสี */
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 80px;
+            /* ตั้งค่าเผื่อความสูงของบรรทัด */
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        .line.completed {
+            color: var(--green-completed);
+            opacity: 0.7;
+        }
+
+        .line.active {
+            color: var(--text-main);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+
+        /* 🟢 เพิ่มคลาสใหม่ สำหรับซ่อนครึ่งแรก/ครึ่งหลัง แบบนุ่มนวล */
+        .line.page-hidden {
+            max-height: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            opacity: 0 !important;
+            border: none;
+            pointer-events: none;
+        }
+
+        .status-bar {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #444;
+        }
+
+        #transcript {
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
+
 <body>
     <div class="card" id="mainCard">
         <h1>พระคาถาเงินล้าน</h1>
         <div class="subtitle">ระบบตรวจจับเสียงอัจฉริยะ (Real-time)</div>
-        
+
         <div class="counter-panel">
             <span class="counter-value" id="loopCount">0</span>
             <span class="counter-label">จบ</span>
@@ -220,7 +314,7 @@
         let mediaRecorder;
         const socket = io();
         let lastMatchIndex = 0;
-        let streamRestartTimer; 
+        let streamRestartTimer;
         let resetTimeout;
 
         const kathaBox = document.getElementById('kathaBox');
@@ -229,38 +323,48 @@
         });
 
         function updateUI(isLoopCompletion = false) {
+            // 🟢 เช็คว่าตอนนี้สวดถึง "ครึ่งหลัง" หรือยัง (index 6 คือวรรค พุทธะมะอะอุ...)
+            const isSecondHalf = currentLine >= 6; 
+
             // อัปเดตข้อความในกล่องที่ซ่อนไว้
             kathaLines.forEach((_, i) => {
                 const el = document.getElementById(`line-${i}`);
-                el.className = 'line';
+                el.className = 'line'; // ล้างคลาสเก่าทั้งหมด
+
+                // เช็คสถานะการสวด
                 if (i < currentLine) el.classList.add('completed');
                 else if (i === currentLine) el.classList.add('active');
+
+                // 🟢 ลอจิกสลับหน้าจอ (Pagination) Reuse พื้นที่
+                if (isSecondHalf) {
+                    // ถ้าอยู่ครึ่งหลัง (6-11) ให้ซ่อนครึ่งแรก (0-5)
+                    if (i < 6) el.classList.add('page-hidden');
+                } else {
+                    // ถ้าอยู่ครึ่งแรก (0-5) ให้ซ่อนครึ่งหลัง (6-11)
+                    if (i >= 6) el.classList.add('page-hidden');
+                }
             });
+
             document.getElementById('loopCount').innerText = loopCount;
 
-            // 🟢 อัปเดตหลอด Progress Bar
+            // --- ส่วนของ Progress Bar (คงไว้เหมือนเดิม) ---
             const progressFill = document.getElementById('progressFill');
-            
             if (isLoopCompletion) {
-                // เอฟเฟกต์สวดจบ: วิ่งไป 100% สว่างวาบ แล้วหดกลับ
                 progressFill.style.transition = 'width 0.3s ease-out';
                 progressFill.style.width = '100%';
-                
                 setTimeout(() => {
-                    progressFill.style.transition = 'none'; // ปิดแอนิเมชันชั่วคราว
-                    progressFill.style.width = '0%'; // หดกลับทันทีไม่ให้เห็นการถอยหลัง
-                    
-                    // หน่วงเวลาเปิดแอนิเมชันกลับมา
+                    progressFill.style.transition = 'none'; 
+                    progressFill.style.width = '0%'; 
                     setTimeout(() => {
                         progressFill.style.transition = 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                     }, 50);
-                }, 400); // โชว์ 100% ค้างไว้ 0.4 วิ
+                }, 400); 
             } else {
-                // วิ่งปกติตามเปอร์เซ็นต์ (เช่น 1/12 = 8.3%)
                 const percentage = (currentLine / kathaLines.length) * 100;
                 progressFill.style.width = `${percentage}%`;
             }
         }
+        // เรียกใช้ครั้งแรกเพื่อจัดหน้าจอเริ่มต้น
         updateUI();
 
         function findFirstMatch(txt, words) {
@@ -278,7 +382,7 @@
         }
 
         socket.on('speech-data', (data) => {
-            if (!isRecording) return; 
+            if (!isRecording) return;
 
             const text = data.transcript;
             document.getElementById('transcript').innerText = text;
@@ -287,9 +391,9 @@
             if (cleanText.length < lastMatchIndex - 10) {
                 lastMatchIndex = 0;
             }
-            
+
             const activeText = cleanText.substring(lastMatchIndex);
-            const maxLookahead = 5; 
+            const maxLookahead = 5;
             let matchFound = false;
             let absoluteNewCurrentLine = currentLine;
             let matchObj = null;
@@ -302,8 +406,8 @@
                 if (match) {
                     matchFound = true;
                     matchObj = match;
-                    absoluteNewCurrentLine = currentLine + offset + 1; 
-                    break; 
+                    absoluteNewCurrentLine = currentLine + offset + 1;
+                    break;
                 }
             }
 
@@ -312,7 +416,7 @@
                 const loopsAdded = Math.floor(absoluteNewCurrentLine / kathaLines.length);
                 loopCount += loopsAdded;
                 currentLine = absoluteNewCurrentLine % kathaLines.length;
-                
+
                 // ส่งสัญญาณบอก UI ว่าเพิ่งบวกรอบใหม่ไป เพื่อเล่นเอฟเฟกต์
                 updateUI(loopsAdded > 0);
             }
@@ -326,11 +430,11 @@
 
             socket.emit('start-recognition');
             mediaRecorder.ondataavailable = (e) => socket.emit('audio-chunk', e.data);
-            mediaRecorder.start(250); 
+            mediaRecorder.start(250);
 
             isRecording = true;
             document.getElementById('mainCard').classList.add('is-recording'); // เปิดไฟ Shimmer บนหลอด
-            
+
             const startBtn = document.getElementById('startBtn');
             startBtn.innerText = "🛑 หยุดสวด";
             startBtn.style.color = "#e74c3c";
@@ -339,29 +443,29 @@
             streamRestartTimer = setInterval(() => {
                 if (isRecording) {
                     mediaRecorder.stop();
-                    socket.emit('stop-recognition'); 
+                    socket.emit('stop-recognition');
                     setTimeout(() => {
-                        if(isRecording) {
-                            socket.emit('start-recognition'); 
+                        if (isRecording) {
+                            socket.emit('start-recognition');
                             mediaRecorder.start(250);
                         }
                     }, 500);
                 }
-            }, 240000); 
+            }, 240000);
         }
 
         document.getElementById('startBtn').onclick = async () => {
             if (!isRecording) {
-                lastMatchIndex = 0; 
+                lastMatchIndex = 0;
                 document.getElementById('transcript').innerText = '-';
                 await startChanting();
             } else {
                 mediaRecorder.stop();
                 socket.emit('stop-recognition');
-                clearInterval(streamRestartTimer); 
+                clearInterval(streamRestartTimer);
                 isRecording = false;
                 document.getElementById('mainCard').classList.remove('is-recording'); // ปิดไฟ Shimmer
-                
+
                 const startBtn = document.getElementById('startBtn');
                 startBtn.innerText = "🎤 เริ่มสวดมนต์";
                 startBtn.style.color = "var(--gold)";
@@ -370,14 +474,14 @@
         };
 
         // Smart Reset Button
-        document.getElementById('resetBtn').onclick = function() {
+        document.getElementById('resetBtn').onclick = function () {
             const btn = this;
             if (btn.dataset.confirm === "false") {
                 btn.dataset.confirm = "true";
                 btn.innerText = "⚠️ ยืนยันรีเซ็ต?";
                 btn.style.color = "var(--danger)";
                 btn.style.borderColor = "rgba(231, 76, 60, 0.5)";
-                
+
                 resetTimeout = setTimeout(() => {
                     btn.dataset.confirm = "false";
                     btn.innerText = "🔄 รีเซ็ต";
@@ -388,10 +492,10 @@
                 clearTimeout(resetTimeout);
                 loopCount = 0;
                 currentLine = 0;
-                lastMatchIndex = 0; 
+                lastMatchIndex = 0;
                 updateUI();
                 document.getElementById('transcript').innerText = '-';
-                
+
                 btn.dataset.confirm = "false";
                 btn.innerText = "🔄 รีเซ็ต";
                 btn.style.color = "";
@@ -400,4 +504,5 @@
         };
     </script>
 </body>
+
 </html>
