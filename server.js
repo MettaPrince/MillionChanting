@@ -93,7 +93,10 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = 3000;
+// เปลี่ยนจาก const PORT = 3000; เป็นการเช็ค Port ของ Cloud ก่อน
+const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-    console.log(`เซิร์ฟเวอร์ทำงานแล้ว! เปิดเบราว์เซอร์ไปที่ http://localhost:${PORT}`);
+    console.log(`เซิร์ฟเวอร์ทำงานแล้วที่ Port: ${PORT}`);
+    console.log(`หากรันบนเครื่องตัวเองให้เข้า: http://localhost:${PORT}`);
 });

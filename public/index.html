@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>พระคาถาเงินล้าน (Divine Edition)</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* 1. Divine Dark Theme & Modern Minimal */
+        :root {
+            --bg-color: #0a0a0c;
+            --card-bg: #141416;
+            --text-main: #e0e0e0;
+            --text-muted: #4a4a52;
+            --gold: #d4af37;
+            --gold-light: #f9e596;
+            --green-completed: #2ecc71;
+            --danger: #e74c3c;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--card-bg);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            text-align: center;
+            box-sizing: border-box;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        h1 {
+            color: var(--gold);
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+            letter-spacing: 1px;
+        }
+
+        .counter-panel {
+            margin: 30px 0;
+        }
+
+        .counter-value {
+            font-size: 80px;
+            font-weight: 300;
+            color: var(--gold-light);
+            display: block;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .counter-label {
+            font-size: 16px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        /* ปุ่มต่างๆ */
+        .btn-group {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: 'Prompt', sans-serif;
+            font-size: 16px;
+            padding: 12px 24px;
+            border: 1px solid transparent;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            background: transparent;
+        }
+
+        .btn-start {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            border-color: rgba(212, 175, 55, 0.5);
+        }
+
+        .btn-start:hover {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-reset {
+            color: var(--text-muted);
+            border-color: #333;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--text-main);
+            color: var(--text-main);
+        }
+
+        /* 2. Style สำหรับเนื้อสวดมนต์ */
+        .katha-container {
+            text-align: left;
+            margin: 25px 0;
+        }
+
+        .line {
+            position: relative;
+            padding: 12px 20px;
+            margin: 8px 0;
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-size: 18px;
+            transition: color 0.4s ease;
+            line-height: 1.6;
+        }
+
+        /* 3. วรรคที่สวดผ่านไปแล้ว (สีเขียว) */
+        .line.completed {
+            color: var(--green-completed);
+            opacity: 0.8;
+        }
+
+        /* 4. วรรคปัจจุบัน (Siri-like glowing animation) */
+        .line.active {
+            color: var(--text-main);
+            font-weight: 400;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+
+        /* เทคนิค CSS Masking สร้างขอบวิ่งแบบ Siri */
+        .line.active::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            padding: 2px;
+            /* ความหนาของเส้นขอบ */
+            background: linear-gradient(90deg, transparent, var(--gold), #ffffff, var(--gold), transparent);
+            background-size: 200% 100%;
+            animation: siriGlow 2.5s linear infinite;
+            /* ตัดให้เหลือแค่ขอบ */
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        @keyframes siriGlow {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .status-bar {
+            margin-top: 30px;
+            font-size: 14px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        #transcript {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>พระคาถาเงินล้าน</h1>
+
+        <div class="counter-panel">
+            <span class="counter-value" id="loopCount">0</span>
+            <span class="counter-label">จบ</span>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn" class="btn btn-start">🎤 เริ่มสวดมนต์</button>
+            <button id="resetBtn" class="btn btn-reset" data-confirm="false">🔄 รีเซ็ต</button>
+        </div>
+
+        <div class="katha-container" id="kathaBox"></div>
+
+        <div class="status-bar">
+            <span>เสียงที่จับได้: </span><span id="transcript">-</span>
+        </div>
+    </div>
+
+    <script>
+        const kathaLines = [
+            { text: "สัมปะจิตฉามิ", triggerWords: ["สัมปะจิตฉามิ"] },
+            { text: "นาสังสิโม", triggerWords: ["สังสิโม"] },
+            { text: "พรัหมา จะ มหาเทวา สัพเพยักขา ปะลายันติ", triggerWords: ["สัพเพยักขา", "ปะรายันติ", "ยันติ", "ปรายัน"] },
+            { text: "พรัหมา จะ มหาเทวา อภิลาภา ภะวันตุ เม", triggerWords: ["อภิลาภา"] },
+            { text: "มหาปุญโญ มหาลาโภ ภะวันตุ เม", triggerWords: ["ปุญโญ", "ปุนโย", "ลาโภ"] },
+            { text: "มิเตพาหุหะติ", triggerWords: ["มิเต", "มีเต", "พาหุ", "หุหะ", "หะติ", "หุหะติ", "หูหะ"] },
+            { text: "พุทธะมะอะอุ นะโมพุทธายะ", triggerWords: ["พุทธะ", "มะอะอุ", "นะโม", "พุทธายะ", "ทายะ", "ท้ายะ"] },
+            { text: "วิระทะโย วิระโคนายัง วิระหิงสา", triggerWords: ["ทะโย", "โคนา", "หิงสา", "หิงษา"] },
+            { text: "วิระทาสี วิระทาสา วิระอิตถิโย", triggerWords: ["ทาสี", "ทาสา", "อิตถิ", "ถิโย"] },
+            { text: "พุทธัสสะ มานีมามะ พุทธัสสะ สวาโหม", triggerWords: ["มานี", "มามะ", "สวา", "สะหวา", "สวาโหม", "วาโหม", "โหม"] },
+            { text: "สัมปะติจฉามิ", triggerWords: ["สัมปะติ", "ปะติฉา", "ติจฉามิ", "ติจ", "ติด"] },
+            { text: "เพ็ง ๆ พา ๆ หา ๆ ฤๅ ๆ", triggerWords: ["หา", "ฤ", "ฤๅ", "ลือ", "รือ"] }
+        ];
+
+        let currentLine = 0;
+        let loopCount = 0;
+        let isRecording = false;
+        let mediaRecorder;
+        const socket = io();
+        let lastMatchIndex = 0;
+        let streamRestartTimer;
+
+        // ตัวแปรสำหรับปุ่ม Reset
+        let resetTimeout;
+
+        const kathaBox = document.getElementById('kathaBox');
+        kathaLines.forEach((l, i) => {
+            kathaBox.innerHTML += `<div class="line" id="line-${i}">${l.text}</div>`;
+        });
+
+        function updateUI() {
+            kathaLines.forEach((_, i) => {
+                const el = document.getElementById(`line-${i}`);
+                el.className = 'line'; // ล้างคลาสเก่า
+
+                if (i < currentLine) {
+                    el.classList.add('completed');
+                } else if (i === currentLine) {
+                    el.classList.add('active'); // คลาสนี้จะแสดงขอบ Siri อัตโนมัติ
+                }
+            });
+            document.getElementById('loopCount').innerText = loopCount;
+        }
+        updateUI();
+
+        function findFirstMatch(txt, words) {
+            let bestMatch = null;
+            for (let i = 0; i < words.length; i++) {
+                const kw = words[i];
+                const idx = txt.indexOf(kw);
+                if (idx !== -1) {
+                    if (!bestMatch || idx < bestMatch.index) {
+                        bestMatch = { keyword: kw, index: idx, length: kw.length };
+                    }
+                }
+            }
+            return bestMatch;
+        }
+
+        socket.on('speech-data', (data) => {
+            const text = data.transcript;
+            document.getElementById('transcript').innerText = text;
+
+            const cleanText = text.replace(/\s+/g, '');
+            if (cleanText.length < lastMatchIndex - 10) {
+                lastMatchIndex = 0;
+            }
+
+            const activeText = cleanText.substring(lastMatchIndex);
+            const maxLookahead = 5;
+            let matchFound = false;
+            let absoluteNewCurrentLine = currentLine;
+            let matchObj = null;
+
+            for (let offset = 0; offset <= maxLookahead; offset++) {
+                const checkIndex = (currentLine + offset) % kathaLines.length;
+                const line = kathaLines[checkIndex];
+                const match = findFirstMatch(activeText, line.triggerWords);
+
+                if (match) {
+                    matchFound = true;
+                    matchObj = match;
+                    absoluteNewCurrentLine = currentLine + offset + 1;
+                    break;
+                }
+            }
+
+            if (matchFound) {
+                lastMatchIndex += matchObj.index + matchObj.length;
+                const loopsAdded = Math.floor(absoluteNewCurrentLine / kathaLines.length);
+                loopCount += loopsAdded;
+                currentLine = absoluteNewCurrentLine % kathaLines.length;
+                updateUI();
+            }
+        });
+
+        async function startChanting() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
+            });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+            socket.emit('start-recognition');
+            mediaRecorder.ondataavailable = (e) => socket.emit('audio-chunk', e.data);
+            mediaRecorder.start(250);
+
+            isRecording = true;
+            const startBtn = document.getElementById('startBtn');
+            startBtn.innerText = "🛑 หยุดสวด";
+            startBtn.style.color = "#e74c3c";
+            startBtn.style.borderColor = "rgba(231, 76, 60, 0.3)";
+
+            streamRestartTimer = setInterval(() => {
+                if (isRecording) {
+                    mediaRecorder.stop();
+                    socket.emit('stop-recognition');
+                    setTimeout(() => {
+                        if (isRecording) {
+                            socket.emit('start-recognition');
+                            mediaRecorder.start(250);
+                        }
+                    }, 500);
+                }
+            }, 240000);
+        }
+
+        document.getElementById('startBtn').onclick = async () => {
+            if (!isRecording) {
+                await startChanting();
+            } else {
+                mediaRecorder.stop();
+                socket.emit('stop-recognition');
+                clearInterval(streamRestartTimer);
+                isRecording = false;
+                const startBtn = document.getElementById('startBtn');
+                startBtn.innerText = "🎤 เริ่มสวดมนต์";
+                startBtn.style.color = "var(--gold)";
+                startBtn.style.borderColor = "rgba(212, 175, 55, 0.5)";
+            }
+        };
+
+        // 🟢 ระบบ Smart Reset Button
+        document.getElementById('resetBtn').onclick = function () {
+            const btn = this;
+            if (btn.dataset.confirm === "false") {
+                // กดครั้งแรก: ถามยืนยัน
+                btn.dataset.confirm = "true";
+                btn.innerText = "⚠️ ยืนยันรีเซ็ต?";
+                btn.style.color = "var(--danger)";
+                btn.style.borderColor = "rgba(231, 76, 60, 0.5)";
+
+                // นับถอยหลัง 3 วินาที ถ้าไม่กดยกเลิกสถานะ
+                resetTimeout = setTimeout(() => {
+                    btn.dataset.confirm = "false";
+                    btn.innerText = "🔄 รีเซ็ต";
+                    btn.style.color = "";
+                    btn.style.borderColor = "";
+                }, 3000);
+            } else {
+                // กดครั้งที่สอง: รีเซ็ตจริงๆ
+                clearTimeout(resetTimeout);
+                loopCount = 0;
+                currentLine = 0;
+                lastMatchIndex = 0;
+                updateUI();
+                document.getElementById('transcript').innerText = '-';
+
+                // เปลี่ยนปุ่มกลับ
+                btn.dataset.confirm = "false";
+                btn.innerText = "🔄 รีเซ็ต";
+                btn.style.color = "";
+                btn.style.borderColor = "";
+            }
+        };
+    </script>
+</body>
+
+</html>
