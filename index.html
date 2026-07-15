@@ -400,7 +400,7 @@
 
 <body>
     <div class="card" id="mainCard">
-        <h1>พระคาถาเงินล้านv1.15</h1>
+        <h1>พระคาถาเงินล้านv1.16</h1>
         <h3 class="ux-warning">⚠ ระบบยังไม่รองรับการสวดเร็วเร่งรีบ</h3>
 
         <div class="counter-panel">
@@ -500,48 +500,11 @@
         let mediaStream = null;
         let audioContext = null;
         let sourceNode = null;
-        let processorNode = null;
+        let workletNode = null;
         let silentGain = null;
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             alert("เบราว์เซอร์ของคุณไม่รองรับการเข้าถึงไมโครโฟน (getUserMedia) แนะนำให้ใช้ Google Chrome ครับ");
-        }
-
-        // Downsample a Float32 audio buffer from the AudioContext's native
-        // sample rate down to 16kHz (box-filter averaging), since sherpa's
-        // model expects 16kHz mono input but browsers usually capture at
-        // 44.1kHz/48kHz.
-        function downsampleTo16k(buffer, inputSampleRate) {
-            if (inputSampleRate === TARGET_SAMPLE_RATE) return buffer;
-
-            const ratio = inputSampleRate / TARGET_SAMPLE_RATE;
-            const newLength = Math.round(buffer.length / ratio);
-            const result = new Float32Array(newLength);
-
-            let offsetResult = 0;
-            let offsetBuffer = 0;
-            while (offsetResult < newLength) {
-                const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
-                let accum = 0;
-                let count = 0;
-                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
-                    accum += buffer[i];
-                    count++;
-                }
-                result[offsetResult] = count > 0 ? accum / count : 0;
-                offsetResult++;
-                offsetBuffer = nextOffsetBuffer;
-            }
-            return result;
-        }
-
-        function floatTo16BitPCM(float32Array) {
-            const int16Array = new Int16Array(float32Array.length);
-            for (let i = 0; i < float32Array.length; i++) {
-                const s = Math.max(-1, Math.min(1, float32Array[i]));
-                int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-            }
-            return int16Array;
         }
 
         socket.on('transcript', (text) => {
@@ -709,10 +672,10 @@
 
             socket.emit('stop-audio');
 
-            if (processorNode) {
-                processorNode.onaudioprocess = null;
-                processorNode.disconnect();
-                processorNode = null;
+            if (workletNode) {
+                workletNode.port.onmessage = null;
+                workletNode.disconnect();
+                workletNode = null;
             }
             if (silentGain) {
                 silentGain.disconnect();
@@ -850,24 +813,34 @@
 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 sourceNode = audioContext.createMediaStreamSource(mediaStream);
-                processorNode = audioContext.createScriptProcessor(AUDIO_CHUNK_SIZE, 1, 1);
 
-                // ScriptProcessorNode only fires 'audioprocess' while connected
-                // to a destination. Route it through a silent gain node so the
-                // user doesn't hear their own mic echoed back.
+                // AudioWorkletNode instead of the deprecated ScriptProcessorNode:
+                // the resample+PCM-encode work (public/pcm-worklet-processor.js)
+                // runs on a dedicated audio-rendering thread instead of the main
+                // thread, so it can't be delayed by UI work (katha viewer
+                // animation, transcript rendering) - the main cause of capture
+                // lag observed on mobile, where CPU headroom is much tighter
+                // than on a laptop.
+                await audioContext.audioWorklet.addModule('/pcm-worklet-processor.js');
+                workletNode = new AudioWorkletNode(audioContext, 'pcm-capture-processor', {
+                    processorOptions: { targetSampleRate: TARGET_SAMPLE_RATE, chunkSize: AUDIO_CHUNK_SIZE },
+                });
+
+                // The worklet posts one transferable ArrayBuffer per finished
+                // chunk (already resampled to 16kHz and encoded to 16-bit PCM).
+                workletNode.port.onmessage = (event) => {
+                    if (!isRecording) return;
+                    socket.emit('audio-chunk', event.data);
+                };
+
+                // AudioWorkletNode only runs its process() while connected to a
+                // destination. Route it through a silent gain node so the user
+                // doesn't hear their own mic echoed back.
                 silentGain = audioContext.createGain();
                 silentGain.gain.value = 0;
 
-                processorNode.onaudioprocess = (event) => {
-                    if (!isRecording) return;
-                    const inputData = event.inputBuffer.getChannelData(0);
-                    const resampled = downsampleTo16k(inputData, audioContext.sampleRate);
-                    const pcm16 = floatTo16BitPCM(resampled);
-                    socket.emit('audio-chunk', pcm16.buffer);
-                };
-
-                sourceNode.connect(processorNode);
-                processorNode.connect(silentGain);
+                sourceNode.connect(workletNode);
+                workletNode.connect(silentGain);
                 silentGain.connect(audioContext.destination);
 
                 socket.emit('start-audio');
