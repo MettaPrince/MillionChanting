@@ -9,5 +9,14 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    envVars:
+      # NODE_OPTIONS is picked up by any `node` invocation regardless of the
+      # exact start command string - more robust than relying on
+      # package.json's "start" script's --expose-gc flag alone, since a
+      # manually-configured Start Command in the Render dashboard overrides
+      # package.json and silently drops that flag (this happened once
+      # already - server logs showed "global.gc() not available").
+      - key: NODE_OPTIONS
+        value: --expose-gc
     # server.js already defaults to model/bpe_vocab.txt; the Windows-only
     # BPE_VOCAB_PATH override must NOT be set here.

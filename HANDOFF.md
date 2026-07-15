@@ -218,15 +218,46 @@ laptop. Investigation so far, in order:
      the next Render log directly shows whether memory is climbing over a
      session or staying flat.
 
-**Not yet done / next step:** a real test against the actual Render
-deployment, watching for `[gc]` log lines over a longer session (is RSS
-climbing or flat?) and whether exit 137 recurs. If baseline RSS really is
-at Render's ceiling, forced GC alone may not be enough — the more direct
-fix is a plan with more RAM. **Note this changes the earlier tier
-recommendation**: Starter ($7/mo) only adds CPU (0.5 vCPU) and keeps the
-*same* 512MB RAM as free, so it would not fix a RAM-ceiling problem.
-**Standard ($25/mo) is the one that adds RAM** (2GB, plus 1 vCPU) and is the
-tier to consider if the baseline-memory theory holds up. Reducing
+6. **First forced-GC retest (2026-07-15, same day) showed the flag never
+   actually ran.** Render's log showed `[gc] global.gc() not available -
+   was the process started without --expose-gc?` right at boot, and the
+   boot line itself read `Running 'node server.js'` — not
+   `node --expose-gc server.js`. This means Render's dashboard has a
+   **manually-configured Start Command that overrides package.json's
+   `"start"` script entirely** — editing `package.json`/`render.yaml` alone
+   does not reach an already-existing (non-Blueprint-deployed) Render
+   service. So the forced-GC mitigation was never actually tested by that
+   retest.
+   That same log ended with Render's own explicit, unambiguous message:
+   **"Ran out of memory (used over 512MB)"** — this fully **confirms** the
+   RAM-ceiling theory from point 4, no longer inferred from exit codes.
+   It also showed memory growth happening progressively *during* a session
+   (the service ran successfully for ~63 seconds, processing several
+   decode segments, before finally crossing the limit) — consistent with
+   the native-stream GC-blind-spot theory actively contributing on top of
+   the tight baseline, not just a static baseline-alone problem.
+   **Fix applied**: switched from relying on the `"start"` script's CLI
+   flag to a `NODE_OPTIONS=--expose-gc` env var (`render.yaml`), which is
+   picked up by any `node` invocation regardless of the exact start
+   command string — verified locally that this works even without an
+   explicit `--expose-gc` flag on the command line. **But this still
+   requires a manual step**: `render.yaml` only applies to new
+   Blueprint-created services; for an existing dashboard-configured
+   service, `NODE_OPTIONS=--expose-gc` must be added directly under that
+   service's Render dashboard → Environment tab, then redeployed. Confirm
+   from the next boot log that `global.gc() not available` does *not*
+   appear before trusting any `[gc]` numbers that follow.
+
+**Not yet done / next step:** after adding `NODE_OPTIONS=--expose-gc` in
+Render's dashboard Environment tab and redeploying, retest and watch for
+`[gc]` log lines over a longer session (is RSS climbing or flat?) and
+whether an OOM recurs. If baseline RSS really is at Render's ceiling,
+forced GC alone may not be enough — the more direct fix is a plan with more
+RAM. **Note this changes the earlier tier recommendation**: Starter
+($7/mo) only adds CPU (0.5 vCPU) and keeps the *same* 512MB RAM as free, so
+it would not fix a RAM-ceiling problem. **Standard ($25/mo) is the one that
+adds RAM** (2GB, plus 1 vCPU) and is the tier to consider if the
+baseline-memory theory holds up even with forced GC in place. Reducing
 server-side decode frequency/cost (e.g. the 400ms
 `PARTIAL_DECODE_INTERVAL_MS`, or `maxActivePaths`) remains a free
 alternative/complement, but trades away some of the deliberately-tuned
