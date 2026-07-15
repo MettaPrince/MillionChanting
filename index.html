@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>พระคาถาเงินล้าน (Divine Edition)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* [CSS ของคุณทั้งหมดคงเดิม 100%] */
+        :root {
+            --bg-color: #0a0a0c;
+            --card-bg: #141416;
+            --text-main: #e0e0e0;
+            --text-muted: #4a4a52;
+            --gold: #d4af37;
+            --gold-light: #f9e596;
+            --green-completed: #2ecc71;
+            --danger: #e74c3c;
+            --debug-neon: #ff2a5f;
+            --debug-neon-light: #ff7698;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--card-bg);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            text-align: center;
+            box-sizing: border-box;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        h1 {
+            color: var(--gold);
+            font-size: 36px;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+        }
+
+        .counter-panel {
+            margin: 30px 0;
+        }
+
+        .counter-value {
+            font-size: 80px;
+            font-weight: 300;
+            color: var(--gold-light);
+            display: block;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .counter-label {
+            font-size: 16px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .progress-wrapper {
+            margin: 40px 0 30px 0;
+            padding: 0 10px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #d4af37, #f9e596, #ffffff);
+            background-size: 200% 100%;
+            border-radius: 10px;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+        }
+
+        .is-recording .progress-fill {
+            animation: shimmerBar 2s infinite linear;
+        }
+
+        @keyframes shimmerBar {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            font-family: 'Prompt', sans-serif;
+            font-size: 16px;
+            padding: 12px 24px;
+            border: 1px solid transparent;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+        }
+
+        .btn-start {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            border-color: rgba(212, 175, 55, 0.5);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-reset {
+            color: var(--text-muted);
+            border-color: #333;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--text-main);
+            color: var(--text-main);
+        }
+
+        .ux-warning {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+
+        details {
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        summary {
+            padding: 14px;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary:hover {
+            color: var(--gold);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .katha-viewport {
+            overflow: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        .katha-slider {
+            display: flex;
+            width: 300%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* transition disabled just for the instant, invisible snap-back
+           from the page1-clone panel to the real page1 after a loop wrap -
+           see snapSliderBackToStart() */
+        .katha-slider.no-transition {
+            transition: none;
+        }
+
+        .katha-page {
+            width: 33.3334%;
+            padding: 10px 20px 20px 20px;
+            box-sizing: border-box;
+            text-align: left;
+        }
+
+        .line-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
+            padding: 4px 0;
+            gap: 10px;
+        }
+
+        .line-wrapper:last-child {
+            border-bottom: none;
+        }
+
+        .line {
+            position: relative;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: #333;
+            font-size: 15px;
+            transition: all 0.4s ease;
+            flex: 1;
+        }
+
+        .line.completed {
+            color: var(--gold);
+            opacity: 0.7;
+        }
+
+        .line.active {
+            color: var(--text-main);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+
+        .line.active::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 8px;
+            padding: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), #ffffff, var(--gold), transparent);
+            background-size: 200% 100%;
+            animation: siriGlow 2.5s linear infinite;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .katha-desc {
+            font-size: 10px;
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 4px 8px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 40%;
+            line-height: 1.3;
+            flex-shrink: 0;
+        }
+
+        .group-wrapper {
+            align-items: stretch;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
+            padding: 4px 0;
+        }
+
+        .lines-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .group-bracket {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 15px;
+            margin-left: 5px;
+            max-width: 38%;
+        }
+
+        .group-bracket::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 12px;
+            bottom: 12px;
+            width: 6px;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .debug-console {
+            background: rgba(0, 0, 0, 0.6);
+            border-top: 1px dashed rgba(255, 42, 95, 0.3);
+            padding: 15px;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+
+        .debug-row {
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 5px;
+        }
+
+        .debug-label {
+            color: #555;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .debug-log-container {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .debug-log-entry {
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        .trigger-highlight {
+            background: rgba(46, 204, 113, 0.2);
+            color: #7fe8ac;
+            padding: 1px 4px;
+            border-radius: 4px;
+            border: 1px solid var(--green-completed);
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.4);
+        }
+
+        .target-line-badge {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .status-bar {
+            margin-top: 25px;
+            font-size: 15px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        #transcriptHistory {
+            color: #5a5a66;
+            font-style: italic;
+            font-size: 13px;
+            margin-bottom: 10px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            margin-bottom: 6px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+        }
+
+        #transcriptCurrent {
+            color: #cccccc;
+            font-style: normal;
+            font-size: 16px;
+            display: block;
+            min-height: 30px;
+            border-left: 3px solid var(--gold);
+            padding-left: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card" id="mainCard">
+        <h1>พระคาถาเงินล้านv1.15</h1>
+        <h3 class="ux-warning">⚠ ระบบยังไม่รองรับการสวดเร็วเร่งรีบ</h3>
+
+        <div class="counter-panel">
+            <span class="counter-label">สวดแล้ว</span>
+            <span class="counter-value" id="loopCount">0</span>
+            <span class="counter-label">จบ</span>
+        </div>
+
+        <div class="progress-wrapper">
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn" class="btn btn-start">🎤 เริ่มสวดมนต์ 🗣</button>
+            <button id="resetBtn" class="btn btn-reset" data-confirm="false">⟳ รีเซ็ต</button>
+        </div>
+
+        <details>
+            <summary>❯❯❯❯ แสดงความคืบหน้า **อย่างหยาบ**</summary>
+            <div class="katha-viewport">
+                <div class="katha-slider" id="kathaSlider">
+                    <div class="katha-page" id="page1"></div>
+                    <div class="katha-page" id="page2"></div>
+                    <!-- Visual-only echo of page1, shown when wrapping from
+                         the last line back to the first so the slide always
+                         continues left instead of snapping backward. Content
+                         is synced from page1's live DOM right before use -
+                         see snapSliderBackToStart(). -->
+                    <div class="katha-page" id="page1Clone" aria-hidden="true"></div>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary>✔ Debug Monitor (ตรวจสอบการทำงาน)</summary>
+            <div class="debug-console">
+                <div class="debug-row">
+                    <span class="debug-label">Active Text:</span>
+                    <span id="debugActiveText" style="color:#888;">-</span>
+                </div>
+                <div class="debug-row">
+                    <span class="debug-label">System State:</span>
+                    <span style="color:#777;">Cursor: <span id="debugIndex">0</span> | Lookahead: <span
+                            id="debugLookahead">3</span></span>
+                </div>
+                <div class="debug-label" style="margin-top: 5px;">Trigger Logs:</div>
+                <div class="debug-log-container" id="debugLog"></div>
+            </div>
+        </details>
+
+        <div class="status-bar">
+            <div style="margin-bottom: 10px;">เสียงที่จับได้:</div>
+            <div id="transcriptHistory"></div>
+            <div id="transcriptCurrent">-</div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 🟢 แยกระหว่าง text ที่จะให้ AI จับ และ desc ที่จะแสดงผลบนหน้าจอ
+        const kathaLines = [
+            { text: "สัมปะจิตฉามิ", desc: "คาถาสนองกลับคุณไสย", triggerWords: ["สัมปะจิต", "สัมปจิต", "สัมปะจิชฌามิ", "จิชฌามิ", "ปะจิตฉา"] },
+            { text: "นาสังสิโม", desc: "คาถาพระพุทธกัสสป หรือหัวใจพญาเต่าเรือน", triggerWords: ["สังสิโม"] },
+            { text: "พรัหมา จะ มหาเทวา สัพเพยักขา ปะลายันติ", desc: "คาถาปัดอุปสรรค", triggerWords: ["สัพเพยักขา", "ปะรายันติ", "ยันติ", "ปรายัน", "ปรายันติ"] },
+            { text: "พรัหมา จะ มหาเทวา อภิลาภา ภะวันตุ เม", desc: "คาถาเงินแสน", triggerWords: ["อภิลาภา", "ภิลาภะ", "ภิลาภา", "ภะวันตุเม", "อภิราภา", "พวันตุเม", "วันตุเม"] },
+            { text: "มหาปุญโญ มหาลาโภ ภะวันตุ เม", desc: "คาถาลาภไม่ขาดสาย", triggerWords: ["มหาปุญ", "ปุญโญ", "ปุนโย", "ปุญโย", "ลาโภ"] },
+            { text: "มิเตพาหุหะติ", desc: "คาถาเงินล้าน", triggerWords: ["มิเต", "มีเต", "ภาหุ", "หุหะ", "หะติ", "หุหะติ", "หูหะ"] },
+            { text: "พุทธะมะอะอุ นะโมพุทธายะ", desc: "คาถาพระปัจเจกพุทธเจ้า", triggerWords: ["มะอะอุ", "นะโม", "พุทธายะ", "ทายะ", "ท้ายะ"] },
+            { text: "วิระทะโย วิระโคนายัง วิระหิงสา", desc: "คาถาพระปัจเจกพุทธเจ้า", triggerWords: ["ทะโย", "ทาโย", "โคนา", "หิงสา", "อิงสา"] },
+            { text: "วิระทาสี วิระทาสา วิระอิตถิโย", desc: "คาถาพระปัจเจกพุทธเจ้า", triggerWords: ["ทาสี", "ทาสา", "อิตถิ", "ถิโย"] },
+            { text: "พุทธัสสะ มานีมามะ พุทธัสสะ สวาโหม", desc: "คาถาพระปัจเจกพุทธเจ้า", triggerWords: ["มานี", "มามะ", "สวา", "สะหวา", "สวาโหม", "วาโหม", "โหม"] },
+            { text: "สัมปะติจฉามิ", desc: "คาถาเร่งลาภให้ได้เร็วขึ้น", triggerWords: ["สัมปติ", "สัมปะติ", "ปะติฉา", "ติจฉามิ"] },
+            { text: "เพ็งเพ็ง พาพา หาหา ฤๅฤๅ", desc: "คาถามหาลาภ", triggerWords: ["หา", "ฤ", "ฤๅ", "ลือ", "รือ"] }
+        ];
+
+        let currentLine = 0;
+        let loopCount = 0;
+        let isRecording = false;
+
+        let idleTimer;
+        const IDLE_TIMEOUT = 5 * 60 * 1000;
+
+        // ------------------------------------------------------------------
+        // 🟢 Sherpa-ONNX client (replaces the old Web Speech API ping-pong
+        // pair). Mic audio is streamed continuously to the server; the server
+        // uses a VAD to cut it into per-phrase segments and emits one
+        // 'transcript' event per finished segment. No 60s cutoff since it's
+        // all a local audio stream to our own server.
+        // ------------------------------------------------------------------
+        const TARGET_SAMPLE_RATE = 16000;
+        const AUDIO_CHUNK_SIZE = 4096;
+
+        const socket = io();
+
+        let mediaStream = null;
+        let audioContext = null;
+        let sourceNode = null;
+        let processorNode = null;
+        let silentGain = null;
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("เบราว์เซอร์ของคุณไม่รองรับการเข้าถึงไมโครโฟน (getUserMedia) แนะนำให้ใช้ Google Chrome ครับ");
+        }
+
+        // Downsample a Float32 audio buffer from the AudioContext's native
+        // sample rate down to 16kHz (box-filter averaging), since sherpa's
+        // model expects 16kHz mono input but browsers usually capture at
+        // 44.1kHz/48kHz.
+        function downsampleTo16k(buffer, inputSampleRate) {
+            if (inputSampleRate === TARGET_SAMPLE_RATE) return buffer;
+
+            const ratio = inputSampleRate / TARGET_SAMPLE_RATE;
+            const newLength = Math.round(buffer.length / ratio);
+            const result = new Float32Array(newLength);
+
+            let offsetResult = 0;
+            let offsetBuffer = 0;
+            while (offsetResult < newLength) {
+                const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+                let accum = 0;
+                let count = 0;
+                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+                result[offsetResult] = count > 0 ? accum / count : 0;
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+            return result;
+        }
+
+        function floatTo16BitPCM(float32Array) {
+            const int16Array = new Int16Array(float32Array.length);
+            for (let i = 0; i < float32Array.length; i++) {
+                const s = Math.max(-1, Math.min(1, float32Array[i]));
+                int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            }
+            return int16Array;
+        }
+
+        socket.on('transcript', (text) => {
+            if (!isRecording) return;
+            advanceMatching(text, true);
+        });
+
+        // Live, growing re-decode of the still-open VAD segment - the SAME
+        // deterministic model re-run on real audio so far, not a revised
+        // guess. Fed through the same advanceMatching pass as the finalized
+        // event, so the outline moves on real matches as soon as they show
+        // up here, instead of waiting for the whole segment to close.
+        socket.on('transcript-partial', (text) => {
+            if (!isRecording) return;
+            advanceMatching(text, false);
+        });
+
+        socket.on('server-error', (msg) => {
+            console.error('Server error:', msg);
+            alert(msg || 'เกิดข้อผิดพลาดที่ฝั่งเซิร์ฟเวอร์');
+            stopChanting();
+        });
+
+        socket.on('connect_error', (err) => {
+            console.warn('Socket connection error:', err.message);
+        });
+
+        const page1 = document.getElementById('page1');
+        const page2 = document.getElementById('page2');
+        let groupHtml = '';
+
+        kathaLines.forEach((l, i) => {
+            if (i < 6) {
+                page1.innerHTML += `
+                    <div class="line-wrapper">
+                        <div class="line" id="line-${i}">${l.text}</div>
+                        <div class="katha-desc">${l.desc}</div>
+                    </div>`;
+            } else {
+                if (i >= 6 && i <= 9) {
+                    groupHtml += `<div class="line" id="line-${i}">${l.text}</div>`;
+                    if (i === 9) {
+                        page2.innerHTML += `
+                            <div class="line-wrapper group-wrapper">
+                                <div class="lines-col">${groupHtml}</div>
+                                <div class="group-bracket">
+                                    <div class="katha-desc">${l.desc}</div>
+                                </div>
+                            </div>`;
+                    }
+                } else {
+                    page2.innerHTML += `
+                        <div class="line-wrapper">
+                            <div class="line" id="line-${i}">${l.text}</div>
+                            <div class="katha-desc">${l.desc}</div>
+                        </div>`;
+                }
+            }
+        });
+
+        // sliderPage: 0 = page1, 1 = page2, 2 = the page1-clone panel (only
+        // ever used transiently while wrapping a completed loop back to the
+        // start - see updateUI's isLoopCompletion branch).
+        let sliderPage = 0;
+        const SLIDER_PAGE_PERCENTS = [0, -33.3334, -66.6668];
+
+        function setSliderPage(page, instant = false) {
+            const slider = document.getElementById('kathaSlider');
+            if (instant) {
+                slider.classList.add('no-transition');
+                void slider.offsetWidth; // force reflow so disabling the transition takes effect first
+            }
+            slider.style.transform = `translateX(${SLIDER_PAGE_PERCENTS[page]}%)`;
+            sliderPage = page;
+            if (instant) {
+                void slider.offsetWidth;
+                slider.classList.remove('no-transition');
+            }
+        }
+
+        function updateUI(isLoopCompletion = false, confirmedLine = currentLine) {
+            kathaLines.forEach((_, i) => {
+                const el = document.getElementById(`line-${i}`);
+                el.className = 'line';
+                if (i < confirmedLine) el.classList.add('completed');
+                else if (i === confirmedLine) el.classList.add('active');
+            });
+
+            if (isLoopCompletion) {
+                // Keep sliding forward (left) into the page1-clone panel
+                // instead of snapping backward to page1 - the clone is
+                // synced from page1's just-updated DOM right before the
+                // slide, so it shows the correct "line 1 active" state
+                // during the transition. Once the slide visually finishes,
+                // jump back to the real page1 with transitions disabled for
+                // one frame, so the reset itself is invisible - the viewer
+                // only ever sees continuous forward motion, never a swipe
+                // backward.
+                document.getElementById('page1Clone').innerHTML = document.getElementById('page1').innerHTML;
+                setSliderPage(2);
+                setTimeout(() => setSliderPage(0, true), 650); // slightly longer than the slider's 0.6s transition
+            } else {
+                const targetPage = confirmedLine >= 6 ? 1 : 0;
+                if (targetPage !== sliderPage) setSliderPage(targetPage);
+            }
+
+            document.getElementById('loopCount').innerText = loopCount;
+
+            const progressFill = document.getElementById('progressFill');
+            if (isLoopCompletion) {
+                progressFill.style.transition = 'width 0.3s ease-out';
+                progressFill.style.width = '100%';
+                setTimeout(() => {
+                    progressFill.style.transition = 'none';
+                    progressFill.style.width = '0%';
+                    setTimeout(() => {
+                        progressFill.style.transition = 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    }, 50);
+                }, 400);
+            } else {
+                const percentage = (confirmedLine / kathaLines.length) * 100;
+                progressFill.style.width = `${percentage}%`;
+            }
+        }
+        updateUI();
+
+        function findFirstMatch(txt, words) {
+            let bestMatch = null;
+            for (let i = 0; i < words.length; i++) {
+                const kw = words[i];
+                const idx = txt.indexOf(kw);
+                if (idx !== -1) {
+                    if (!bestMatch || idx < bestMatch.index) {
+                        bestMatch = { keyword: kw, index: idx, length: kw.length };
+                    }
+                }
+            }
+            return bestMatch;
+        }
+
+        function pushToHistory() {
+            const currentHtml = document.getElementById('transcriptCurrent').innerHTML;
+            if (currentHtml && currentHtml !== '-' && currentHtml.trim() !== '') {
+                const historyDiv = document.getElementById('transcriptHistory');
+                historyDiv.innerHTML += `<div class="history-item">${currentHtml}</div>`;
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+            }
+        }
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            if (isRecording) {
+                idleTimer = setTimeout(() => {
+                    alert("⏳ ระบบหยุดการฟังอัตโนมัติ เนื่องจากตรวจไม่พบเสียงสวดมนต์เป็นเวลานาน");
+                    stopChanting();
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        function stopChanting() {
+            if (!isRecording) return;
+
+            isRecording = false;
+            clearTimeout(idleTimer);
+
+            socket.emit('stop-audio');
+
+            if (processorNode) {
+                processorNode.onaudioprocess = null;
+                processorNode.disconnect();
+                processorNode = null;
+            }
+            if (silentGain) {
+                silentGain.disconnect();
+                silentGain = null;
+            }
+            if (sourceNode) {
+                sourceNode.disconnect();
+                sourceNode = null;
+            }
+            if (audioContext) {
+                audioContext.close().catch(() => { });
+                audioContext = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            document.getElementById('mainCard').classList.remove('is-recording');
+            const startBtn = document.getElementById('startBtn');
+            startBtn.innerText = "🎤 เริ่มสวดมนต์ 🗣";
+            startBtn.style.color = "var(--gold)";
+            startBtn.style.borderColor = "rgba(212, 175, 55, 0.5)";
+            startBtn.disabled = false;
+            startBtn.style.opacity = "1";
+            startBtn.style.cursor = "pointer";
+        }
+
+        // Session state for the utterance currently in progress. Both
+        // 'transcript-partial' (live, growing re-decode of the still-open
+        // VAD segment) and 'transcript' (the same segment once finalized)
+        // feed through this SAME state and the SAME matching pass - partial
+        // decodes are the real deterministic model re-run on real audio, not
+        // a revised guess the way browser interim results are, so a match
+        // found via a partial event is just as real as one found via the
+        // final event. That's what lets the outline move as each real match
+        // is found instead of waiting for the whole segment to close first.
+        let sessionMatchCursor = 0; // how much of the session's clean text has already produced a match
+        let sessionMatchedKeywords = []; // accumulated across the whole segment, for display highlighting
+        const maxLookahead = 3; // คงไว้ที่ 3 ตามที่ต้องการ
+
+        function advanceMatching(text, isFinal) {
+            if (text && text.trim().length > 0) resetIdleTimer();
+
+            const cleanText = (text || '').replace(/\s+/g, '');
+            // Defensive clamp - partial/final text for one segment should
+            // only ever grow, but guard against a shorter read anyway
+            // instead of trying to substring a negative range.
+            if (cleanText.length < sessionMatchCursor) sessionMatchCursor = cleanText.length;
+
+            // A single update can still reveal several lines' worth of
+            // matches at once (e.g. you chanted a couple lines faster than
+            // the ~400ms partial cadence), so keep matching the newly
+            // revealed remainder until nothing more lines up - each match
+            // still updates the UI immediately, right here, no animation
+            // queue or delay.
+            while (sessionMatchCursor < cleanText.length) {
+                const activeText = cleanText.substring(sessionMatchCursor);
+
+                let matchFound = false;
+                let matchObj = null;
+                let matchedCheckIndex = 0;
+                let absoluteNewCurrentLine = currentLine;
+
+                for (let offset = 0; offset <= maxLookahead; offset++) {
+                    const checkIndex = (currentLine + offset) % kathaLines.length;
+                    const line = kathaLines[checkIndex];
+                    const match = findFirstMatch(activeText, line.triggerWords);
+
+                    if (match) {
+                        matchFound = true;
+                        matchObj = match;
+                        matchedCheckIndex = checkIndex;
+                        absoluteNewCurrentLine = currentLine + offset + 1;
+                        break;
+                    }
+                }
+
+                if (!matchFound) break;
+
+                const keyword = matchObj.keyword;
+                sessionMatchedKeywords.push(keyword);
+
+                const timeStr = new Date().toLocaleTimeString('th-TH');
+                const logEntry = `
+                    <div class="debug-log-entry">
+                        [${timeStr}] จับคำว่า <span class="trigger-highlight">${keyword}</span> ➔ <span class="target-line-badge">[วรรค ${matchedCheckIndex + 1}]</span>
+                    </div>`;
+                const debugLog = document.getElementById('debugLog');
+                debugLog.innerHTML = logEntry + debugLog.innerHTML;
+
+                sessionMatchCursor += matchObj.index + matchObj.length;
+
+                const loopsAdded = Math.floor(absoluteNewCurrentLine / kathaLines.length);
+                loopCount += loopsAdded;
+                currentLine = absoluteNewCurrentLine % kathaLines.length;
+
+                updateUI(loopsAdded > 0); // real match, right now - no staggering
+            }
+
+            document.getElementById('debugIndex').innerText = sessionMatchCursor;
+            document.getElementById('debugActiveText').innerText = cleanText.substring(sessionMatchCursor).length > 0 ? cleanText.substring(sessionMatchCursor) : "[รอรับเสียง]";
+
+            let displayTranscript = text || '';
+            sessionMatchedKeywords.forEach(kw => {
+                const regex = new RegExp(kw, 'g');
+                displayTranscript = displayTranscript.replace(regex, `<span class="trigger-highlight">${kw}</span>`);
+            });
+            document.getElementById('transcriptCurrent').innerHTML = displayTranscript || '-';
+
+            if (isFinal) {
+                // The segment is closed - file the finished line away and
+                // reset session tracking so the next segment's partial/final
+                // events start matching from a clean slate at cursor 0.
+                pushToHistory();
+                document.getElementById('transcriptCurrent').innerHTML = '-';
+                sessionMatchCursor = 0;
+                sessionMatchedKeywords = [];
+            }
+        }
+
+        async function startChanting() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        // Off: with a virtual-cable/loopback input, Chrome's echo
+                        // canceler treats the signal as playback echo and zeroes
+                        // it out almost entirely (peak amplitude stays at 0).
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                    }
+                });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                sourceNode = audioContext.createMediaStreamSource(mediaStream);
+                processorNode = audioContext.createScriptProcessor(AUDIO_CHUNK_SIZE, 1, 1);
+
+                // ScriptProcessorNode only fires 'audioprocess' while connected
+                // to a destination. Route it through a silent gain node so the
+                // user doesn't hear their own mic echoed back.
+                silentGain = audioContext.createGain();
+                silentGain.gain.value = 0;
+
+                processorNode.onaudioprocess = (event) => {
+                    if (!isRecording) return;
+                    const inputData = event.inputBuffer.getChannelData(0);
+                    const resampled = downsampleTo16k(inputData, audioContext.sampleRate);
+                    const pcm16 = floatTo16BitPCM(resampled);
+                    socket.emit('audio-chunk', pcm16.buffer);
+                };
+
+                sourceNode.connect(processorNode);
+                processorNode.connect(silentGain);
+                silentGain.connect(audioContext.destination);
+
+                socket.emit('start-audio');
+
+                isRecording = true;
+                document.getElementById('mainCard').classList.add('is-recording');
+
+                const startBtn = document.getElementById('startBtn');
+                startBtn.innerText = "🛑 หยุดสวด";
+                startBtn.style.color = "#e74c3c";
+                startBtn.style.borderColor = "rgba(231, 76, 60, 0.3)";
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+                startBtn.style.cursor = "pointer";
+
+                resetIdleTimer();
+            } catch (error) {
+                console.error("เกิดข้อผิดพลาดในการเปิดไมค์:", error);
+                alert("ไม่สามารถเข้าถึงไมโครโฟนได้ หรือไมค์อาจถูกใช้งานอยู่");
+                const startBtn = document.getElementById('startBtn');
+                startBtn.innerText = "🎤 เริ่มสวดมนต์ 🗣";
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+                startBtn.style.cursor = "pointer";
+            }
+        }
+
+        document.getElementById('startBtn').onclick = async function () {
+            if (!isRecording) {
+                this.innerText = "⏳ กำลังเชื่อมต่อ...";
+                this.disabled = true;
+                this.style.opacity = "0.7";
+                this.style.cursor = "not-allowed";
+
+                sessionMatchCursor = 0;
+                sessionMatchedKeywords = [];
+                document.getElementById('transcriptCurrent').innerHTML = '-';
+                document.getElementById('transcriptHistory').innerHTML = '';
+                document.getElementById('debugLog').innerHTML = '';
+                document.getElementById('debugActiveText').innerText = '-';
+
+                await startChanting();
+            } else {
+                stopChanting();
+            }
+        };
+
+        let resetTimeout;
+        document.getElementById('resetBtn').onclick = function () {
+            const btn = this;
+            if (btn.dataset.confirm === "false") {
+                btn.dataset.confirm = "true";
+                btn.innerText = "⚠️ ยืนยันรีเซ็ต?";
+                btn.style.color = "var(--danger)";
+                btn.style.borderColor = "rgba(231, 76, 60, 0.5)";
+
+                resetTimeout = setTimeout(() => {
+                    btn.dataset.confirm = "false";
+                    btn.innerText = "⟳ รีเซ็ต";
+                    btn.style.color = "";
+                    btn.style.borderColor = "";
+                }, 3000);
+            } else {
+                clearTimeout(resetTimeout);
+                loopCount = 0;
+                currentLine = 0;
+                sessionMatchCursor = 0;
+                sessionMatchedKeywords = [];
+                updateUI();
+
+                document.getElementById('transcriptCurrent').innerText = '-';
+                document.getElementById('transcriptHistory').innerHTML = '';
+                document.getElementById('debugLog').innerHTML = '';
+
+                btn.dataset.confirm = "false";
+                btn.innerText = "⟳ รีเซ็ต";
+                btn.style.color = "";
+                btn.style.borderColor = "";
+            }
+        };
+    </script>
+
+</body>
+
+</html>

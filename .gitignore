@@ -1,0 +1,14 @@
+node_modules
+
+# Secrets — never commit (deprecated Google STT service-account key)
+key.json
+
+# Large / derived model weights.
+# The int8 encoder (~147MB) is over GitHub's 100MB limit; it's hosted as a
+# release asset and pulled at build time by scripts/fetch-model.js.
+model/encoder-epoch-12-avg-5.int8.onnx
+# Full-precision weights (~600MB encoder) are NOT used by server.js — the app
+# runs the int8 files. Keep them out of the repo entirely.
+model/*-epoch-12-avg-5.onnx
+# Sample wavs shipped with the k2-fsa model release — not needed at runtime.
+model/test_wavs/

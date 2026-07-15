@@ -1,0 +1,19 @@
+# Render.com blueprint for the chanting-app.
+# `npm install` triggers the postinstall hook (scripts/fetch-model.js), which
+# downloads the ~147MB int8 encoder from this repo's models-v1 release.
+services:
+  - type: web
+    name: chanting-app
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      # Read-access token for this PRIVATE repo, so the build can pull the
+      # encoder release asset. Set the value in the Render dashboard
+      # (sync:false keeps it out of this file). A fine-grained PAT scoped to
+      # MettaPrince/MillionChanting with "Contents: read" is enough.
+      - key: GITHUB_TOKEN
+        sync: false
+      # server.js already defaults to model/bpe_vocab.txt; the Windows-only
+      # BPE_VOCAB_PATH override must NOT be set here.

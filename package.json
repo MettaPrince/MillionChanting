@@ -2,16 +2,19 @@
   "name": "chanting-app",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "postinstall": "node scripts/fetch-model.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/speech": "^7.5.0",
     "express": "^5.2.1",
+    "sherpa-onnx": "^1.13.4",
+    "sherpa-onnx-node": "^1.13.4",
     "socket.io": "^4.8.3"
   }
 }
