@@ -145,20 +145,22 @@ the end.
    int8 model chosen for this reason; `numThreads` is 2 (recognizer) / 1
    (VAD) in server.js — tune down if memory/CPU-constrained.
 
-### Secret note: key.json — URGENT, repo is now public
+### Secret note: key.json — scrubbed from history 2026-07-15
 
 `key.json` (a GCP service-account key from the abandoned Google STT path) was
-committed in the initial commit (`e5ecb17`) and is **still in git history**,
-though removed from the current tree and gitignored. **The repo was made
-public on 2026-07-15**, so this key is now visible to anyone, including
-automated credential-scanning bots that continuously crawl public GitHub
-repos. If not already done: **revoke this key in the GCP console
-immediately** — that's the step that actually stops misuse; removing it from
-git history alone does not (a key committed to a public repo, even briefly,
-should be treated as compromised regardless of later history rewrites).
-After revoking, scrub it from history with `git filter-repo`/BFG + force-push
-if you want it fully gone (not done automatically — ask if you want this
-done for you).
+committed in the initial commit and briefly visible in the public repo. It
+has since been fully removed via `git filter-repo` + a force-push to
+`origin/main` (and the `models-v1` tag, whose commit hash also shifted) —
+verified gone from every commit/branch via a fresh clone and a full object
+scan. **All commit hashes changed** as a result; if anyone else ever cloned
+this repo before 2026-07-15, their clone has now diverged and needs a fresh
+clone or a hard reset to the new history.
+
+This only removes the key from git — it does **not** revoke the credential
+itself. Since the key was exposed on a public repo (even briefly), **treat it
+as compromised and revoke it in the GCP console** if that hasn't been done
+already; a history scrub alone doesn't invalidate a key that may have already
+been scraped.
 
 ## Local scratch files (not part of the repo, informational only)
 
