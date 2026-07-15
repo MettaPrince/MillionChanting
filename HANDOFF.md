@@ -166,18 +166,72 @@ laptop. Investigation so far, in order:
      a classic hidden mobile-specific lag source), live ping RTT, a running
      sent-chunk counter, and a capture status/error indicator.
 
-**Not yet done / next step:** a real phone test against the actual Render
-deployment, with the Debug Monitor panel open, plus checking Render's logs
-for the RTF numbers. That data should say definitively whether this is
-CPU-starvation, transport fallback, both, or something not yet considered
-— rather than guessing a fourth fix blind. Once diagnosed, the two
-known remediation paths (should the CPU-starvation theory hold) are: (a)
-upgrade Render's plan (Starter $7/mo = 0.5 vCPU, Standard $25/mo = 1 vCPU +
-2GB RAM — pure cost, no UX tradeoff), or (b) reduce server-side decode
-frequency/cost (e.g. the 400ms `PARTIAL_DECODE_INTERVAL_MS`, or
-`maxActivePaths`) — free, but trades away some of the deliberately-tuned
-"live" responsiveness described under Real-time matching design above, so
-don't change those without the project owner's sign-off.
+4. **Got a real Render log** (2026-07-15, same day) from an actual test
+   session. It showed something more specific and severe than "slow":
+   - **RTF was actually fine** (0.27x-0.68x, comfortably under real-time)
+     across every decode call. This *disproves* the CPU-starvation-causes-
+     slow-decode theory from point 2 above — the 0.1 vCPU is not too weak
+     to run this model in real time.
+   - But `decodeSegment()` re-decodes the **entire growing buffer from
+     scratch** every partial-decode tick (a known, deliberate design
+     choice), so decode time climbs as a segment gets longer: one segment's
+     ticks went 291ms → 588ms → 795ms → 1002ms → 1288ms → 1601ms →
+     **2096ms**, reaching **7.42s of audio** despite `maxSpeechDuration: 6`
+     in the VAD config — it should have force-closed at 6s and didn't
+     (not yet root-caused; worth checking sherpa-onnx's actual
+     `maxSpeechDuration` semantics, or whether the JS-side `speechBuffer`
+     preview tracker can drift out of sync with VAD's real segment
+     boundary).
+   - Right after that 2096ms decode, the service **restarted**
+     (`==> Running 'node server.js'`, full ~25s model reload) with no
+     redeploy having been triggered. The user then reported Render's own
+     failure message directly: **"Exited with status 137"** — exit 137 is
+     SIGKILL, and on Render this is the standard signature of an **OOM
+     kill**, not a health-check timeout.
+   - Investigated why: `decodeSegment()` calls `recognizer.createStream()`
+     on *every* decode (partial and final). Confirmed via `strings` on the
+     compiled `sherpa-onnx-node` addon that `OfflineStream` **does** have a
+     proper N-API finalizer wired to a native destroy function (not a
+     hard/permanent leak) — but the addon **never calls
+     `napi_adjust_external_memory`** (also confirmed absent from the
+     binary), so V8's GC has no signal that native memory is piling up
+     behind each stream handle; it only looks at JS heap size, and a stream
+     wrapper looks like a near-zero-byte object to it. Frequent stream
+     creation (every ~400ms-1s during continuous speech) can plausibly
+     outpace how often V8 decides to collect on its own.
+   - **Bigger and simpler finding, measured directly in this Codespace**:
+     baseline RSS with the model loaded and **zero clients connected** is
+     already **~500-523MB** (cross-checked via both Node's own
+     `process.memoryUsage()` and the OS `ps` RSS column). Render's free tier
+     *and* Starter tier both cap at **512MB RAM** — meaning this app's
+     baseline footprint alone is already at or over that ceiling before any
+     real usage, which is a much simpler and more direct explanation for an
+     OOM kill than the stream-leak nuance above (though that nuance likely
+     still contributes on top, under sustained use).
+5. **Mitigations applied** (2026-07-15, not yet confirmed against a real
+   Render retest):
+   - `package.json`: `"start": "node --expose-gc server.js"`.
+   - `server.js`: a periodic (`FORCED_GC_INTERVAL_MS`, 20s) forced
+     `global.gc()` with before/after RSS + external-memory logging
+     (`[gc] RSS ...`), so orphaned native stream handles get reclaimed on a
+     bounded schedule instead of waiting on V8's blind heuristics, and so
+     the next Render log directly shows whether memory is climbing over a
+     session or staying flat.
+
+**Not yet done / next step:** a real test against the actual Render
+deployment, watching for `[gc]` log lines over a longer session (is RSS
+climbing or flat?) and whether exit 137 recurs. If baseline RSS really is
+at Render's ceiling, forced GC alone may not be enough — the more direct
+fix is a plan with more RAM. **Note this changes the earlier tier
+recommendation**: Starter ($7/mo) only adds CPU (0.5 vCPU) and keeps the
+*same* 512MB RAM as free, so it would not fix a RAM-ceiling problem.
+**Standard ($25/mo) is the one that adds RAM** (2GB, plus 1 vCPU) and is the
+tier to consider if the baseline-memory theory holds up. Reducing
+server-side decode frequency/cost (e.g. the 400ms
+`PARTIAL_DECODE_INTERVAL_MS`, or `maxActivePaths`) remains a free
+alternative/complement, but trades away some of the deliberately-tuned
+"live" responsiveness described under Real-time matching design above — get
+the project owner's sign-off before changing those.
 
 ## Deployment status (updated 2026-07-15, Codespace session)
 

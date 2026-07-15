@@ -222,6 +222,43 @@ if (!vadSanityCheck) {
 if (typeof vadSanityCheck.free === 'function') vadSanityCheck.free();
 
 // ----------------------------------------------------------------------------
+// Periodic forced GC - works around a native-addon memory-growth pattern.
+//
+// decodeSegment() below calls recognizer.createStream() on every decode,
+// including the live partial-preview one firing every ~400ms-1s during
+// continuous speech. sherpa-onnx-node's OfflineStream wraps a native
+// SherpaOnnxOfflineStream pointer with a proper N-API finalizer (confirmed
+// via `strings` on the compiled addon - SherpaOnnxDestroyOfflineStream is
+// wired up), so this isn't a hard/permanent leak. But the addon never calls
+// napi_adjust_external_memory to tell V8 how much native memory each handle
+// actually holds (also confirmed via `strings` - that symbol isn't present
+// anywhere in the binary) - V8's GC scheduling only looks at JS heap size,
+// and each stream wrapper looks like a near-zero-byte object to it, so V8
+// has no signal to collect promptly even as native memory piles up behind
+// many short-lived handles. On Render's 512MB free tier this can plausibly
+// exhaust memory and trigger an OOM kill (exit code 137, confirmed from a
+// real Render log) well before V8 would have gotten around to a GC pass on
+// its own. Forcing a GC pass periodically (requires --expose-gc, see
+// package.json's "start" script) reclaims those orphaned native-memory
+// handles on a bounded schedule instead of leaving it to V8's blind spot.
+// Logs memory before/after so this can be confirmed/tuned from Render logs.
+// ----------------------------------------------------------------------------
+const FORCED_GC_INTERVAL_MS = 20 * 1000;
+if (typeof global.gc === 'function') {
+    setInterval(() => {
+        const before = process.memoryUsage();
+        global.gc();
+        const after = process.memoryUsage();
+        console.log(
+            `[gc] RSS ${(before.rss / 1e6).toFixed(0)}MB -> ${(after.rss / 1e6).toFixed(0)}MB, ` +
+            `external ${(before.external / 1e6).toFixed(0)}MB -> ${(after.external / 1e6).toFixed(0)}MB`
+        );
+    }, FORCED_GC_INTERVAL_MS);
+} else {
+    console.warn('[gc] global.gc() not available - was the process started without --expose-gc?');
+}
+
+// ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
 function pcm16ToFloat32(int16Array) {
