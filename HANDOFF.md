@@ -17,21 +17,31 @@ Render.com for a charity, primary target is mobile Chrome.
 - **index.html** (served at `/`) — the active frontend. Captures mic audio,
   streams it to the server, and matches decoded text against per-line trigger
   words to advance the UI in real time. This is the file to keep iterating on.
-- **public/pcm-worklet-processor.js** — `AudioWorkletProcessor` that does the
-  mic capture pipeline's downsample-to-16kHz + Float32→Int16 PCM encoding on
-  a dedicated audio-rendering thread, then posts finished chunks back to
-  index.html via `port.postMessage` for the socket to emit. Added
-  2026-07-15, replacing a `ScriptProcessorNode`-based version whose
-  `onaudioprocess` callback ran on the **main thread** — invisible on a
-  laptop's CPU headroom, but the identified cause of a capture-lag issue
-  reported specifically on mobile (main thread also does katha-viewer UI
-  work, so mobile's tighter CPU budget let the two compete for the same
-  thread). Note: the abandoned Web Speech API prototype
-  (`public/indexping.html`, mentioned in older notes) never had this problem
-  because `MediaRecorder` encodes audio natively without any manual JS
-  sample processing — but it also can't produce the raw PCM the local ASR
-  model needs, which is why that approach isn't an option here. That old
-  prototype file no longer exists in the repo.
+- Mic capture in index.html uses `ScriptProcessorNode`
+  (`createScriptProcessor`) to get raw PCM out of the Web Audio graph for
+  downsample-to-16kHz + Float32→Int16 encoding, then emits chunks over the
+  socket. **AudioWorkletNode was tried and reverted on 2026-07-15** (moving
+  that same work to `public/pcm-worklet-processor.js` on a dedicated
+  audio-rendering thread, to fix a mobile capture-lag report) — but testing
+  showed it captured **worse** than the ScriptProcessorNode version even on
+  localhost with a full CPU available, which localhost had never had a
+  problem with before. That means whatever went wrong wasn't the
+  CPU-contention theory the migration was meant to fix; there's a real,
+  not-yet-diagnosed bug specific to the AudioWorkletNode implementation
+  (or how this app wired it up) that made it strictly worse, not just
+  ineffective. Don't re-attempt this migration without first understanding
+  *why* it regressed — re-adding the same worklet code blind will very
+  likely reproduce the same regression. The file was deleted; if picking
+  this back up, `git show 394d3c5:public/pcm-worklet-processor.js` has the
+  old implementation for reference, and `git show 394d3c5 -- index.html`
+  has how it was wired in.
+  Separately (and still true regardless of the above): the abandoned Web
+  Speech API prototype (`public/indexping.html`, mentioned in older notes,
+  no longer in the repo) never had a capture-lag problem at all, because
+  `MediaRecorder` encodes audio natively with no manual JS sample
+  processing — but it also can't produce the raw PCM the local ASR model
+  needs, so it isn't an option here regardless of this ScriptProcessor
+  vs. AudioWorklet question.
 - **model/** — Thai Zipformer transducer model files + Silero VAD model
   (`silero_vad.onnx`, project root). Both int8 and full-precision encoder
   files are present locally; **only the int8 files are used** by server.js
@@ -116,6 +126,58 @@ words hotword-boosted.
   `vadConfig`) were raised from defaults (0.5 / 0.2) specifically to stop
   short noise/breath blips from opening a false segment that then blends
   with real speech and produces a garbled/hallucinated decode.
+
+## Capture-lag investigation (ongoing, opened 2026-07-15)
+
+Reported symptom: chanting on mobile felt slower/more delayed than on a
+laptop. Investigation so far, in order:
+
+1. Suspected `ScriptProcessorNode`'s main-thread `onaudioprocess` callback
+   competing with UI work on mobile's tighter CPU budget. Migrated to
+   `AudioWorkletNode` to move that work off the main thread. **Reverted** —
+   see the AudioWorkletNode note under Architecture above; it made capture
+   *worse*, even on localhost, which points at a real bug in that
+   implementation rather than confirming/denying the original theory.
+2. Confirmed Render's free tier is **0.1 vCPU / 512MB RAM** (real number,
+   not an assumption — see sources in the conversation this was resolved
+   in). Both a laptop and a phone were reported slow when hitting the same
+   deployed Render URL, while a laptop hitting **localhost** was fine — that
+   rules out "mobile-specific" as the sole cause and points at Render's
+   server-side compute being the bottleneck for everyone.
+   `recognizer.decode()` in `decodeSegment()` (server.js) is a synchronous
+   native call that blocks Node's single event loop thread for its full
+   duration; on a CPU-starved host a slow decode also delays every queued
+   audio-chunk and the partial-decode timer behind it.
+3. Added diagnostics, still in place, not yet reviewed against a real
+   Render+phone test:
+   - server.js: logs `[decode] Xs audio in Yms (RTF Z x)` per decode call —
+     RTF (real-time factor) consistently above 1 on Render would confirm
+     the CPU-starvation theory directly.
+   - server.js: a `client-ping`/`client-pong` immediate echo (before any
+     VAD/decode work), so round-trip network latency can be measured
+     separately from ASR compute time.
+   - server.js: recognizer `numThreads` dropped 2 → 1 to match the
+     confirmed 0.1 vCPU allocation (a second thread has no spare core to
+     run on there).
+   - index.html: the "Debug Monitor" panel (already in the UI, tap to
+     expand) has new rows showing the negotiated Socket.IO transport
+     (`websocket` vs. a mobile network falling back to HTTP long-polling —
+     the latter adds a full request/response round-trip per message and is
+     a classic hidden mobile-specific lag source), live ping RTT, a running
+     sent-chunk counter, and a capture status/error indicator.
+
+**Not yet done / next step:** a real phone test against the actual Render
+deployment, with the Debug Monitor panel open, plus checking Render's logs
+for the RTF numbers. That data should say definitively whether this is
+CPU-starvation, transport fallback, both, or something not yet considered
+— rather than guessing a fourth fix blind. Once diagnosed, the two
+known remediation paths (should the CPU-starvation theory hold) are: (a)
+upgrade Render's plan (Starter $7/mo = 0.5 vCPU, Standard $25/mo = 1 vCPU +
+2GB RAM — pure cost, no UX tradeoff), or (b) reduce server-side decode
+frequency/cost (e.g. the 400ms `PARTIAL_DECODE_INTERVAL_MS`, or
+`maxActivePaths`) — free, but trades away some of the deliberately-tuned
+"live" responsiveness described under Real-time matching design above, so
+don't change those without the project owner's sign-off.
 
 ## Deployment status (updated 2026-07-15, Codespace session)
 
