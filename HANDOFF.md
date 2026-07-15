@@ -17,10 +17,21 @@ Render.com for a charity, primary target is mobile Chrome.
 - **index.html** (served at `/`) — the active frontend. Captures mic audio,
   streams it to the server, and matches decoded text against per-line trigger
   words to advance the UI in real time. This is the file to keep iterating on.
-- **public/indexping.html** — an earlier, abandoned prototype using the
-  browser's Web Speech API (Google cloud STT) instead of the local model.
-  Kept for reference only; **not wired into the current architecture** and
-  not being maintained. Ignore unless explicitly asked to revisit it.
+- **public/pcm-worklet-processor.js** — `AudioWorkletProcessor` that does the
+  mic capture pipeline's downsample-to-16kHz + Float32→Int16 PCM encoding on
+  a dedicated audio-rendering thread, then posts finished chunks back to
+  index.html via `port.postMessage` for the socket to emit. Added
+  2026-07-15, replacing a `ScriptProcessorNode`-based version whose
+  `onaudioprocess` callback ran on the **main thread** — invisible on a
+  laptop's CPU headroom, but the identified cause of a capture-lag issue
+  reported specifically on mobile (main thread also does katha-viewer UI
+  work, so mobile's tighter CPU budget let the two compete for the same
+  thread). Note: the abandoned Web Speech API prototype
+  (`public/indexping.html`, mentioned in older notes) never had this problem
+  because `MediaRecorder` encodes audio natively without any manual JS
+  sample processing — but it also can't produce the raw PCM the local ASR
+  model needs, which is why that approach isn't an option here. That old
+  prototype file no longer exists in the repo.
 - **model/** — Thai Zipformer transducer model files + Silero VAD model
   (`silero_vad.onnx`, project root). Both int8 and full-precision encoder
   files are present locally; **only the int8 files are used** by server.js
