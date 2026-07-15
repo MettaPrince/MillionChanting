@@ -51,24 +51,36 @@ class PCMCaptureProcessor extends AudioWorkletProcessor {
     // Called every ~128-sample render quantum. Accumulate into chunkSize
     // (matches the previous ScriptProcessor buffer size) before doing the
     // resample/encode work, so downstream chunk cadence is unchanged.
+    //
+    // Wrapped in try/catch and reporting failures back to the main thread:
+    // an uncaught exception here silently disables this processor for the
+    // rest of the session (the spec has the browser stop calling process()
+    // after a throw) with nothing visible in the page - on a real phone with
+    // no devtools attached that would look exactly like "capture stopped
+    // working" with no clue why. Surfacing it lets the Debug Monitor panel
+    // show the actual cause instead of a silent dead mic.
     process(inputs) {
-        const channelData = inputs[0] && inputs[0][0];
-        if (!channelData || channelData.length === 0) return true;
+        try {
+            const channelData = inputs[0] && inputs[0][0];
+            if (!channelData || channelData.length === 0) return true;
 
-        const merged = new Float32Array(this.buffer.length + channelData.length);
-        merged.set(this.buffer, 0);
-        merged.set(channelData, this.buffer.length);
-        this.buffer = merged;
+            const merged = new Float32Array(this.buffer.length + channelData.length);
+            merged.set(this.buffer, 0);
+            merged.set(channelData, this.buffer.length);
+            this.buffer = merged;
 
-        if (this.buffer.length >= this.chunkSize) {
-            const chunk = this.buffer.subarray(0, this.chunkSize);
-            this.buffer = this.buffer.slice(this.chunkSize);
+            if (this.buffer.length >= this.chunkSize) {
+                const chunk = this.buffer.subarray(0, this.chunkSize);
+                this.buffer = this.buffer.slice(this.chunkSize);
 
-            // `sampleRate` is a read-only global in AudioWorkletGlobalScope -
-            // the AudioContext's native rate.
-            const resampled = this.downsampleTo16k(chunk, sampleRate);
-            const pcm16 = this.floatTo16BitPCM(resampled);
-            this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+                // `sampleRate` is a read-only global in AudioWorkletGlobalScope -
+                // the AudioContext's native rate.
+                const resampled = this.downsampleTo16k(chunk, sampleRate);
+                const pcm16 = this.floatTo16BitPCM(resampled);
+                this.port.postMessage({ type: 'audio', buffer: pcm16.buffer }, [pcm16.buffer]);
+            }
+        } catch (err) {
+            this.port.postMessage({ type: 'error', message: err.message });
         }
 
         return true;

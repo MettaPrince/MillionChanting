@@ -141,7 +141,12 @@ const offlineRecognizerConfig = {
         // bpe_vocab.txt to work around it locally.
         modelingUnit: 'bpe',
         bpeVocab: process.env.BPE_VOCAB_PATH || path.join(MODEL_DIR, 'bpe_vocab.txt'),
-        numThreads: 2,
+        // Render's free tier allocates 0.1 vCPU (a tenth of one core) - there
+        // is no spare core for a second thread to actually run on, so 2
+        // threads here only adds OS scheduling/context-switch overhead on
+        // that host, not real parallelism. 1 matches the actual available
+        // compute; revisit only if this ever runs on a host with >=1 real CPU.
+        numThreads: 1,
         provider: 'cpu',
         debug: false,
         // NOTE: no modelType here on purpose - forcing "zipformer2" is what
@@ -258,10 +263,24 @@ function stripHallucinations(text) {
 
 // Run the (comparatively slow, non-streaming) ASR model on one finished
 // speech segment and return its text.
+//
+// Logs a real-time factor (RTF) for every decode: wall-clock decode time
+// divided by the audio's own duration. RTF > 1 means decode is slower than
+// real time - on a CPU-starved host (e.g. Render free tier's 0.1 vCPU) this
+// is the mechanism that causes growing lag: recognizer.decode() below is a
+// synchronous native call that blocks Node's single event loop thread for
+// its full duration, so a slow decode also delays every queued audio-chunk
+// and the partial-decode timer behind it, not just this one call.
 function decodeSegment(samples) {
     const stream = recognizer.createStream(HOTWORDS);
     stream.acceptWaveform({ samples, sampleRate: 16000 });
+
+    const audioSeconds = samples.length / 16000;
+    const decodeStart = Date.now();
     recognizer.decode(stream);
+    const decodeMs = Date.now() - decodeStart;
+    const rtf = audioSeconds > 0 ? (decodeMs / 1000 / audioSeconds) : 0;
+    console.log(`[decode] ${audioSeconds.toFixed(2)}s audio in ${decodeMs}ms (RTF ${rtf.toFixed(2)}x)`);
 
     // Different sherpa-onnx-node versions expose the result slightly
     // differently - support both shapes defensively.
@@ -298,6 +317,14 @@ io.on('connection', (socket) => {
     let partialTimer = null;
 
     console.log('Client connected:', socket.id);
+
+    // Immediate echo, deliberately before any VAD/decode work, so the client
+    // can measure pure transport round-trip time separate from ASR compute
+    // time - lets the Debug Monitor panel tell network latency apart from a
+    // slow/backed-up decode.
+    socket.on('client-ping', (sentAt) => {
+        socket.emit('client-pong', sentAt);
+    });
 
     socket.on('start-audio', () => {
         if (vad && typeof vad.free === 'function') vad.free();

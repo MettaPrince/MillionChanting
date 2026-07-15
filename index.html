@@ -400,7 +400,7 @@
 
 <body>
     <div class="card" id="mainCard">
-        <h1>พระคาถาเงินล้านv1.16</h1>
+        <h1>พระคาถาเงินล้านv1.17</h1>
         <h3 class="ux-warning">⚠ ระบบยังไม่รองรับการสวดเร็วเร่งรีบ</h3>
 
         <div class="counter-panel">
@@ -447,6 +447,15 @@
                     <span class="debug-label">System State:</span>
                     <span style="color:#777;">Cursor: <span id="debugIndex">0</span> | Lookahead: <span
                             id="debugLookahead">3</span></span>
+                </div>
+                <div class="debug-row">
+                    <span class="debug-label">Connection:</span>
+                    <span style="color:#777;">Transport: <span id="debugTransport">-</span> | Ping: <span
+                            id="debugRtt">-</span>ms | Chunks sent: <span id="debugChunkCount">0</span></span>
+                </div>
+                <div class="debug-row">
+                    <span class="debug-label">Worklet:</span>
+                    <span id="debugWorkletStatus" style="color:#777;">not started</span>
                 </div>
                 <div class="debug-label" style="margin-top: 5px;">Trigger Logs:</div>
                 <div class="debug-log-container" id="debugLog"></div>
@@ -531,6 +540,43 @@
         socket.on('connect_error', (err) => {
             console.warn('Socket connection error:', err.message);
         });
+
+        // ------------------------------------------------------------------
+        // Diagnostics for the "Debug Monitor" panel - added to get real
+        // numbers from a phone in the field instead of guessing. Shows which
+        // transport Socket.IO actually negotiated (a mobile network/carrier
+        // silently falling back from 'websocket' to HTTP long-polling adds a
+        // full request/response round-trip per message and is a common
+        // mobile-specific source of lag), a network round-trip time isolated
+        // from server-side decode work (a trivial immediate echo, so it
+        // measures transport latency only, not ASR compute time), and a
+        // running count of audio chunks actually sent by the worklet.
+        // ------------------------------------------------------------------
+        let audioChunkCount = 0;
+        function updateTransportDisplay() {
+            const el = document.getElementById('debugTransport');
+            if (el && socket.io && socket.io.engine) el.textContent = socket.io.engine.transport.name;
+        }
+        socket.on('connect', () => {
+            updateTransportDisplay();
+            if (socket.io && socket.io.engine) {
+                socket.io.engine.on('upgrade', updateTransportDisplay);
+            }
+        });
+        socket.on('client-pong', (sentAt) => {
+            const el = document.getElementById('debugRtt');
+            if (el) el.textContent = Math.round(performance.now() - sentAt);
+        });
+        let pingTimer = null;
+        function startPingLoop() {
+            if (pingTimer) return;
+            pingTimer = setInterval(() => {
+                if (socket.connected) socket.emit('client-ping', performance.now());
+            }, 2000);
+        }
+        function stopPingLoop() {
+            if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+        }
 
         const page1 = document.getElementById('page1');
         const page2 = document.getElementById('page2');
@@ -669,6 +715,7 @@
 
             isRecording = false;
             clearTimeout(idleTimer);
+            stopPingLoop();
 
             socket.emit('stop-audio');
 
@@ -826,11 +873,27 @@
                     processorOptions: { targetSampleRate: TARGET_SAMPLE_RATE, chunkSize: AUDIO_CHUNK_SIZE },
                 });
 
-                // The worklet posts one transferable ArrayBuffer per finished
-                // chunk (already resampled to 16kHz and encoded to 16-bit PCM).
+                const workletStatusEl = document.getElementById('debugWorkletStatus');
+                if (workletStatusEl) { workletStatusEl.textContent = 'started, waiting for audio...'; workletStatusEl.style.color = '#777'; }
+
+                // The worklet posts a {type, ...} message per finished chunk
+                // (already resampled to 16kHz and encoded to 16-bit PCM) or on
+                // an internal error - surfaced here into the Debug Monitor
+                // panel so a real device issue is visible without needing
+                // remote devtools.
                 workletNode.port.onmessage = (event) => {
+                    const msg = event.data;
+                    if (msg.type === 'error') {
+                        console.error('Worklet error:', msg.message);
+                        if (workletStatusEl) { workletStatusEl.textContent = 'ERROR: ' + msg.message; workletStatusEl.style.color = 'var(--danger)'; }
+                        return;
+                    }
                     if (!isRecording) return;
-                    socket.emit('audio-chunk', event.data);
+                    audioChunkCount++;
+                    const countEl = document.getElementById('debugChunkCount');
+                    if (countEl) countEl.textContent = audioChunkCount;
+                    if (workletStatusEl) { workletStatusEl.textContent = 'active'; workletStatusEl.style.color = 'var(--green-completed)'; }
+                    socket.emit('audio-chunk', msg.buffer);
                 };
 
                 // AudioWorkletNode only runs its process() while connected to a
@@ -844,6 +907,8 @@
                 silentGain.connect(audioContext.destination);
 
                 socket.emit('start-audio');
+                audioChunkCount = 0;
+                startPingLoop();
 
                 isRecording = true;
                 document.getElementById('mainCard').classList.add('is-recording');
