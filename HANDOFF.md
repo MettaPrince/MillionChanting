@@ -112,7 +112,8 @@ Most blockers below are now **RESOLVED**. Remaining runtime tuning noted at
 the end.
 
 1. ~~No git repo~~ **DONE** — repo exists and is pushed to
-   `github.com/MettaPrince/MillionChanting` (**private**).
+   `github.com/MettaPrince/MillionChanting` (**public**, changed from private
+   2026-07-15 — see secret note below, this matters).
 2. ~~No `.gitignore`~~ **DONE** — excludes `node_modules`, `key.json`, the
    large int8 encoder (fetched at build), the unused full-precision `*.onnx`
    weights, and `model/test_wavs/`.
@@ -123,10 +124,9 @@ the end.
      (`models-v1` release) and pulled at build time by
      [scripts/fetch-model.js](scripts/fetch-model.js), wired as `postinstall`
      in package.json.
-   - Because the repo is **private**, that fetch needs auth: set a
-     `GITHUB_TOKEN` env var in Render (fine-grained PAT, Contents:read on this
-     repo). See [render.yaml](render.yaml). Locally/Codespace the file is
-     already in `model/` so the script no-ops without a token.
+   - Repo is now **public**, so the release asset downloads anonymously — no
+     token/auth needed. `scripts/fetch-model.js` just does a plain HTTPS GET
+     on the public release-asset URL. See [render.yaml](render.yaml).
    - Full-precision `*.onnx` weights (~600MB encoder etc.) are gitignored and
      unused. `decoder`/`joiner` int8, `tokens.txt`, `bpe_vocab.txt`,
      `bpe.model`, and root `silero_vad.onnx` are small and committed directly.
@@ -145,14 +145,20 @@ the end.
    int8 model chosen for this reason; `numThreads` is 2 (recognizer) / 1
    (VAD) in server.js — tune down if memory/CPU-constrained.
 
-### Secret note: key.json
+### Secret note: key.json — URGENT, repo is now public
 
-`key.json` (deprecated GCP service-account key) was committed in the initial
-commit and is **still in git history**, though removed from the current tree
-and now gitignored. Repo is private so exposure is limited to collaborators.
-Google STT path is deprecated so the key should be revoked in GCP regardless.
-If you want it gone from history entirely, do a `git filter-repo`/BFG scrub +
-force-push (not done automatically).
+`key.json` (a GCP service-account key from the abandoned Google STT path) was
+committed in the initial commit (`e5ecb17`) and is **still in git history**,
+though removed from the current tree and gitignored. **The repo was made
+public on 2026-07-15**, so this key is now visible to anyone, including
+automated credential-scanning bots that continuously crawl public GitHub
+repos. If not already done: **revoke this key in the GCP console
+immediately** — that's the step that actually stops misuse; removing it from
+git history alone does not (a key committed to a public repo, even briefly,
+should be treated as compromised regardless of later history rewrites).
+After revoking, scrub it from history with `git filter-repo`/BFG + force-push
+if you want it fully gone (not done automatically — ask if you want this
+done for you).
 
 ## Local scratch files (not part of the repo, informational only)
 
