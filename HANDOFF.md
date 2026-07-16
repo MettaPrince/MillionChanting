@@ -264,6 +264,102 @@ alternative/complement, but trades away some of the deliberately-tuned
 "live" responsiveness described under Real-time matching design above — get
 the project owner's sign-off before changing those.
 
+## Mobile app pivot (Flutter, opened 2026-07-16)
+
+**This is now the primary active direction — the web app above is not
+abandoned, but new feature work should go to `mobile/` first.**
+
+### Why this happened
+
+After the OOM investigation above got a fix in place, the project owner asked
+a bigger question: even with memory flat, could Render (or any single-process
+Node host) actually sustain "100+ concurrent users" once the app goes public?
+A real local load test (1-60 simulated concurrent clients against
+`server.js`) confirmed **no** — this is architectural, not a tier/budget
+problem. `recognizer.decode()` is a synchronous native call on Node's single
+event loop thread; every concurrent user's decode blocks every other user's
+audio processing. Scaling would require a worker/cluster architecture
+(assessed: real but non-trivial extra cost and complexity) or moving to a
+managed cloud STT API (assessed: rejected — Google STT and Web Speech API
+were already tried earlier for this project's specific "long continuous
+chanting" use case and found unreliable/inconsistent for it, see "Why
+sherpa-onnx" above; this project's repeating 12-line katha content is also
+overkill for a general-purpose paid STT API).
+
+The project owner then proposed the actual fix: move compute to each user's
+own phone, no cloud/server at all. Chosen over the server-scaling paths
+("Path A") as more robust and higher-performance, on the condition that the
+existing dark/gold theme, katha viewer, debug monitor, history log, and
+trigger-word highlighting all carry over. Flutter was chosen as the
+cross-platform framework — the official `sherpa_onnx` Dart package's API
+maps closely onto `sherpa-onnx-node`'s (`OfflineRecognizer`,
+`VoiceActivityDetector`, `SileroVadModelConfig`, etc.), so the existing model
+files and VAD tuning port over directly with no retraining/reconversion.
+Sticking with the current sherpa-onnx model (rather than researching a
+lighter Thai STT alternative first) was an explicit owner decision — "we
+dont wait for future uncertainty."
+
+### What's built (`mobile/`)
+
+A complete, compiling Flutter Android project — not a POC. Runs the same
+Zipformer Thai model + Silero VAD entirely on-device via the official
+`sherpa_onnx` Flutter package; mic audio never leaves the phone, no server,
+no network round-trip.
+
+- `lib/katha_data.dart` — `kathaLines` ported 1:1 from index.html.
+- `lib/matching_engine.dart` — faithful port of `advanceMatching`/
+  `findFirstMatch`, preserving `sessionMatchCursor`, `maxLookahead = 3`, and
+  the forward-only loop-wrap math. **This is the same core logic described
+  under "Real-time matching design" above — do not reinterpret it, port it
+  literally.**
+- `lib/asr_engine.dart` — mirrors server.js's VAD-windowing/decode pipeline
+  (same thresholds: VAD threshold 0.6, minSilenceDuration/minSpeechDuration
+  0.35, maxSpeechDuration 6) using the `record` package for raw PCM capture.
+  One API difference from sherpa-onnx-node: Dart's `createStream()` has no
+  per-call hotwords argument — hotwords are configured once via
+  `hotwordsFile` at recognizer construction instead (see
+  `katha_data.dart`'s `buildHotwordsFileContent()`).
+- `lib/widgets/katha_viewer.dart`, `lib/widgets/debug_monitor.dart`,
+  `lib/main.dart` — UI reproducing index.html's dark/gold theme, 3-panel
+  carousel, debug panel (RTF decode timing instead of network
+  transport/RTT, since there's no server round-trip on-device), history
+  log, and trigger-word highlighting.
+- `mobile/README.md` — build instructions and known simplifications for
+  this first testable build (decode currently runs on the main isolate, a
+  flagged risk for long segments; glow animation is a static gradient, not
+  the web version's rotating keyframe; no custom "Prompt" font bundled yet).
+
+Model assets (same files as `model/` + root `silero_vad.onnx`) are copied
+into `mobile/assets/` before building — gitignored for the same file-size
+reason as the server (see `mobile/.gitignore`), copied in manually per
+`mobile/README.md`'s one-time setup step, then bundled into the APK and
+extracted to app-writable storage on first launch.
+
+### Status as of 2026-07-16
+
+Release APK built successfully (240MB, `flutter build apk --release`) in
+the Codespace, verified via `aapt dump badging` (correct package name,
+`RECORD_AUDIO` permission present, minSdk 24 — compatible with the project
+owner's test device, a Samsung S21 Ultra 5G on Android 11+). Committed as
+`de7f176` and pushed to `origin/main`.
+
+**Not yet done: real-device testing.** The Codespace this was built in has
+no USB/adb access to a physical phone and was hitting disk-space limits
+(94% full even after cleanup), so **development is moving to the project
+owner's local machine** for the actual test-on-device loop (`flutter run`
+over USB gives hot reload + direct install, vs. building an APK and finding
+a way to sideload it from a cloud sandbox). Local setup: `git clone` →
+`npm install` (pulls the gitignored 147MB int8 encoder via
+`scripts/fetch-model.js`'s postinstall) → follow `mobile/README.md`'s asset
+copy step → `flutter pub get && flutter run`. One gotcha hit in the
+Codespace worth checking locally too: Gradle 8.12 doesn't support JDK 25,
+needed `flutter config --jdk-dir=<path-to-jdk-21>`.
+
+Known simplifications to validate/fix once real-device testing confirms
+the core approach works: move `recognizer.decode()` off the main isolate
+(background isolate) to eliminate a UI-jank risk on long segments; restore
+the rotating glow animation; bundle the actual "Prompt" font.
+
 ## Deployment status (updated 2026-07-15, Codespace session)
 
 Most blockers below are now **RESOLVED**. Remaining runtime tuning noted at
